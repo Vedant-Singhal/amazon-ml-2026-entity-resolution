@@ -1,0 +1,588 @@
+{
+  "best": {
+    "kind": "expf_any",
+    "m": 1.25,
+    "miss": 0.1,
+    "floor": 0.02,
+    "one_owner": true,
+    "macro_f05": 0.9887618779986834
+  },
+  "all": [
+    {
+      "kind": "expf_any",
+      "m": 1.25,
+      "miss": 0.1,
+      "floor": 0.02,
+      "one_owner": true,
+      "macro_f05": 0.9887618779986834
+    },
+    {
+      "kind": "expf_any",
+      "m": 1.25,
+      "miss": 0.1,
+      "floor": 0.1,
+      "one_owner": true,
+      "macro_f05": 0.9887612478787857
+    },
+    {
+      "kind": "expf_any",
+      "m": 1.25,
+      "miss": 0.1,
+      "floor": 0.05,
+      "one_owner": true,
+      "macro_f05": 0.9887607392620893
+    },
+    {
+      "kind": "expf_any",
+      "m": 1.25,
+      "miss": 0.0,
+      "floor": 0.1,
+      "one_owner": true,
+      "macro_f05": 0.9887580852281758
+    },
+    {
+      "kind": "expf_any",
+      "m": 1.25,
+      "miss": 0.0,
+      "floor": 0.05,
+      "one_owner": true,
+      "macro_f05": 0.9887575407900705
+    },
+    {
+      "kind": "expf_any",
+      "m": 1.25,
+      "miss": 0.0,
+      "floor": 0.02,
+      "one_owner": true,
+      "macro_f05": 0.9887572553953073
+    },
+    {
+      "kind": "expf_any",
+      "m": 1.0,
+      "miss": 0.1,
+      "floor": 0.02,
+      "one_owner": true,
+      "macro_f05": 0.9887463100392269
+    },
+    {
+      "kind": "expf_any",
+      "m": 1.0,
+      "miss": 0.1,
+      "floor": 0.05,
+      "one_owner": true,
+      "macro_f05": 0.9887447181621201
+    },
+    {
+      "kind": "expf_any",
+      "m": 1.0,
+      "miss": 0.1,
+      "floor": 0.1,
+      "one_owner": true,
+      "macro_f05": 0.9887436947323198
+    },
+    {
+      "kind": "expf_any",
+      "m": 1.0,
+      "miss": 0.0,
+      "floor": 0.05,
+      "one_owner": true,
+      "macro_f05": 0.9887389303157412
+    },
+    {
+      "kind": "expf_any",
+      "m": 1.0,
+      "miss": 0.0,
+      "floor": 0.02,
+      "one_owner": true,
+      "macro_f05": 0.9887386449209781
+    },
+    {
+      "kind": "expf_any",
+      "m": 1.0,
+      "miss": 0.0,
+      "floor": 0.1,
+      "one_owner": true,
+      "macro_f05": 0.9887372845747002
+    },
+    {
+      "kind": "expf_any",
+      "m": 0.8,
+      "miss": 0.1,
+      "floor": 0.02,
+      "one_owner": true,
+      "macro_f05": 0.9886974706626281
+    },
+    {
+      "kind": "expf_any",
+      "m": 0.8,
+      "miss": 0.1,
+      "floor": 0.05,
+      "one_owner": true,
+      "macro_f05": 0.9886963319260343
+    },
+    {
+      "kind": "expf_any",
+      "m": 0.8,
+      "miss": 0.1,
+      "floor": 0.1,
+      "one_owner": true,
+      "macro_f05": 0.9886962147772603
+    },
+    {
+      "kind": "expf_any",
+      "m": 0.8,
+      "miss": 0.0,
+      "floor": 0.05,
+      "one_owner": true,
+      "macro_f05": 0.9886903606656383
+    },
+    {
+      "kind": "expf_any",
+      "m": 0.8,
+      "miss": 0.0,
+      "floor": 0.02,
+      "one_owner": true,
+      "macro_f05": 0.9886900752708754
+    },
+    {
+      "kind": "expf_any",
+      "m": 0.8,
+      "miss": 0.0,
+      "floor": 0.1,
+      "one_owner": true,
+      "macro_f05": 0.9886896212056235
+    },
+    {
+      "kind": "expf",
+      "miss": 0.0,
+      "floor": 0.2,
+      "one_owner": true,
+      "macro_f05": 0.9886446215284628
+    },
+    {
+      "kind": "expf",
+      "miss": 0.0,
+      "floor": 0.1,
+      "one_owner": true,
+      "macro_f05": 0.988643057585032
+    },
+    {
+      "kind": "expf",
+      "miss": 0.0,
+      "floor": 0.05,
+      "one_owner": true,
+      "macro_f05": 0.988640495592738
+    },
+    {
+      "kind": "expf",
+      "miss": 0.05,
+      "floor": 0.2,
+      "one_owner": true,
+      "macro_f05": 0.9886401343097276
+    },
+    {
+      "kind": "expf",
+      "miss": 0.0,
+      "floor": 0.02,
+      "one_owner": true,
+      "macro_f05": 0.9886400088021912
+    },
+    {
+      "kind": "expf",
+      "miss": 0.05,
+      "floor": 0.1,
+      "one_owner": true,
+      "macro_f05": 0.988638272234984
+    },
+    {
+      "kind": "expf",
+      "miss": 0.05,
+      "floor": 0.05,
+      "one_owner": true,
+      "macro_f05": 0.9886320609248259
+    },
+    {
+      "kind": "expf",
+      "miss": 0.05,
+      "floor": 0.02,
+      "one_owner": true,
+      "macro_f05": 0.9886305289915014
+    },
+    {
+      "kind": "expf",
+      "miss": 0.1,
+      "floor": 0.2,
+      "one_owner": true,
+      "macro_f05": 0.9886212079652174
+    },
+    {
+      "kind": "expf",
+      "miss": 0.1,
+      "floor": 0.1,
+      "one_owner": true,
+      "macro_f05": 0.9886201574634388
+    },
+    {
+      "kind": "thresh",
+      "t": 0.7,
+      "floor": 0.0,
+      "one_owner": true,
+      "any_min": 0.35,
+      "macro_f05": 0.9886151146641724
+    },
+    {
+      "kind": "thresh",
+      "t": 0.7,
+      "floor": 0.0,
+      "one_owner": true,
+      "any_min": 0.2,
+      "macro_f05": 0.9886126223913511
+    },
+    {
+      "kind": "thresh",
+      "t": 0.7,
+      "floor": 0.0,
+      "one_owner": true,
+      "macro_f05": 0.9886121692508381
+    },
+    {
+      "kind": "expf",
+      "miss": 0.1,
+      "floor": 0.05,
+      "one_owner": true,
+      "macro_f05": 0.9886107586614401
+    },
+    {
+      "kind": "thresh",
+      "t": 0.65,
+      "floor": 0.0,
+      "one_owner": true,
+      "any_min": 0.35,
+      "macro_f05": 0.9886095016954723
+    },
+    {
+      "kind": "expf",
+      "miss": 0.1,
+      "floor": 0.02,
+      "one_owner": true,
+      "macro_f05": 0.9886067618055538
+    },
+    {
+      "kind": "thresh",
+      "t": 0.65,
+      "floor": 0.0,
+      "one_owner": true,
+      "any_min": 0.2,
+      "macro_f05": 0.988605650001112
+    },
+    {
+      "kind": "thresh",
+      "t": 0.65,
+      "floor": 0.0,
+      "one_owner": true,
+      "macro_f05": 0.9886029311580341
+    },
+    {
+      "kind": "thresh",
+      "t": 0.7,
+      "floor": 0.0,
+      "one_owner": true,
+      "any_min": 0.5,
+      "macro_f05": 0.9885955864658749
+    },
+    {
+      "kind": "thresh",
+      "t": 0.65,
+      "floor": 0.0,
+      "one_owner": true,
+      "any_min": 0.5,
+      "macro_f05": 0.988593706511877
+    },
+    {
+      "kind": "thresh",
+      "t": 0.75,
+      "floor": 0.0,
+      "one_owner": true,
+      "macro_f05": 0.9885751618736821
+    },
+    {
+      "kind": "thresh",
+      "t": 0.7,
+      "floor": 0.0,
+      "one_owner": false,
+      "macro_f05": 0.9885710011816322
+    },
+    {
+      "kind": "expf",
+      "miss": 0.2,
+      "floor": 0.2,
+      "one_owner": true,
+      "macro_f05": 0.9885708450397557
+    },
+    {
+      "kind": "expf",
+      "miss": 0.2,
+      "floor": 0.05,
+      "one_owner": true,
+      "macro_f05": 0.9885671192638559
+    },
+    {
+      "kind": "expf",
+      "miss": 0.2,
+      "floor": 0.1,
+      "one_owner": true,
+      "macro_f05": 0.9885668688714087
+    },
+    {
+      "kind": "expf",
+      "miss": 0.2,
+      "floor": 0.02,
+      "one_owner": true,
+      "macro_f05": 0.9885661626800144
+    },
+    {
+      "kind": "thresh",
+      "t": 0.75,
+      "floor": 0.0,
+      "one_owner": false,
+      "macro_f05": 0.9885448036244403
+    },
+    {
+      "kind": "thresh",
+      "t": 0.65,
+      "floor": 0.0,
+      "one_owner": false,
+      "macro_f05": 0.9885446951276138
+    },
+    {
+      "kind": "thresh",
+      "t": 0.6,
+      "floor": 0.0,
+      "one_owner": true,
+      "any_min": 0.35,
+      "macro_f05": 0.9885244115871953
+    },
+    {
+      "kind": "thresh",
+      "t": 0.6,
+      "floor": 0.0,
+      "one_owner": true,
+      "any_min": 0.2,
+      "macro_f05": 0.9885176900029196
+    },
+    {
+      "kind": "thresh",
+      "t": 0.6,
+      "floor": 0.0,
+      "one_owner": true,
+      "macro_f05": 0.9885148956364227
+    },
+    {
+      "kind": "thresh",
+      "t": 0.6,
+      "floor": 0.0,
+      "one_owner": true,
+      "any_min": 0.5,
+      "macro_f05": 0.9885063291229154
+    },
+    {
+      "kind": "thresh",
+      "t": 0.6,
+      "floor": 0.0,
+      "one_owner": false,
+      "macro_f05": 0.9884292891700078
+    },
+    {
+      "kind": "thresh",
+      "t": 0.8,
+      "floor": 0.0,
+      "one_owner": true,
+      "macro_f05": 0.988419544475247
+    },
+    {
+      "kind": "thresh",
+      "t": 0.8,
+      "floor": 0.0,
+      "one_owner": false,
+      "macro_f05": 0.9883998558827343
+    },
+    {
+      "kind": "thresh",
+      "t": 0.55,
+      "floor": 0.0,
+      "one_owner": true,
+      "macro_f05": 0.9881892650010241
+    },
+    {
+      "kind": "thresh",
+      "t": 0.85,
+      "floor": 0.0,
+      "one_owner": true,
+      "macro_f05": 0.9880437720104218
+    },
+    {
+      "kind": "thresh",
+      "t": 0.85,
+      "floor": 0.0,
+      "one_owner": false,
+      "macro_f05": 0.9880316470649375
+    },
+    {
+      "kind": "thresh",
+      "t": 0.55,
+      "floor": 0.0,
+      "one_owner": false,
+      "macro_f05": 0.9880109164648474
+    },
+    {
+      "kind": "thresh",
+      "t": 0.5,
+      "floor": 0.0,
+      "one_owner": true,
+      "any_min": 0.5,
+      "macro_f05": 0.9878441548704994
+    },
+    {
+      "kind": "thresh",
+      "t": 0.5,
+      "floor": 0.0,
+      "one_owner": true,
+      "any_min": 0.35,
+      "macro_f05": 0.9878236916203497
+    },
+    {
+      "kind": "thresh",
+      "t": 0.5,
+      "floor": 0.0,
+      "one_owner": true,
+      "any_min": 0.2,
+      "macro_f05": 0.9878045302500864
+    },
+    {
+      "kind": "thresh",
+      "t": 0.5,
+      "floor": 0.0,
+      "one_owner": true,
+      "macro_f05": 0.9877976576189729
+    },
+    {
+      "kind": "thresh",
+      "t": 0.5,
+      "floor": 0.0,
+      "one_owner": false,
+      "macro_f05": 0.9874858119280411
+    },
+    {
+      "kind": "thresh",
+      "t": 0.9,
+      "floor": 0.0,
+      "one_owner": true,
+      "macro_f05": 0.9872766250596826
+    },
+    {
+      "kind": "thresh",
+      "t": 0.9,
+      "floor": 0.0,
+      "one_owner": false,
+      "macro_f05": 0.9872723763440439
+    },
+    {
+      "kind": "thresh",
+      "t": 0.45,
+      "floor": 0.0,
+      "one_owner": true,
+      "macro_f05": 0.9872163556617815
+    },
+    {
+      "kind": "thresh",
+      "t": 0.45,
+      "floor": 0.0,
+      "one_owner": false,
+      "macro_f05": 0.9866372163958463
+    },
+    {
+      "kind": "thresh",
+      "t": 0.4,
+      "floor": 0.0,
+      "one_owner": true,
+      "macro_f05": 0.9862899814596496
+    },
+    {
+      "kind": "thresh",
+      "t": 0.35,
+      "floor": 0.0,
+      "one_owner": true,
+      "macro_f05": 0.985617128418504
+    },
+    {
+      "kind": "thresh",
+      "t": 0.95,
+      "floor": 0.0,
+      "one_owner": true,
+      "macro_f05": 0.9852830760274748
+    },
+    {
+      "kind": "thresh",
+      "t": 0.95,
+      "floor": 0.0,
+      "one_owner": false,
+      "macro_f05": 0.9852818748601228
+    },
+    {
+      "kind": "thresh",
+      "t": 0.4,
+      "floor": 0.0,
+      "one_owner": false,
+      "macro_f05": 0.9851769331711885
+    },
+    {
+      "kind": "thresh",
+      "t": 0.3,
+      "floor": 0.0,
+      "one_owner": true,
+      "macro_f05": 0.9845709015855432
+    },
+    {
+      "kind": "thresh",
+      "t": 0.35,
+      "floor": 0.0,
+      "one_owner": false,
+      "macro_f05": 0.9840612337870278
+    },
+    {
+      "kind": "thresh",
+      "t": 0.25,
+      "floor": 0.0,
+      "one_owner": true,
+      "macro_f05": 0.9833239281781985
+    },
+    {
+      "kind": "thresh",
+      "t": 0.3,
+      "floor": 0.0,
+      "one_owner": false,
+      "macro_f05": 0.9821088384854179
+    },
+    {
+      "kind": "thresh",
+      "t": 0.2,
+      "floor": 0.0,
+      "one_owner": true,
+      "macro_f05": 0.9819077559777812
+    },
+    {
+      "kind": "thresh",
+      "t": 0.25,
+      "floor": 0.0,
+      "one_owner": false,
+      "macro_f05": 0.9795893107595811
+    },
+    {
+      "kind": "thresh",
+      "t": 0.2,
+      "floor": 0.0,
+      "one_owner": false,
+      "macro_f05": 0.9764916521134742
+    }
+  ]
+}

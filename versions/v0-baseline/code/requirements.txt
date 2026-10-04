@@ -1,0 +1,10 @@
+# Versions for v0. xgboost is exact (read from the saved model); the others were not recorded
+# at run time — the Studio image's defaults were used.
+xgboost==2.1.4
+faiss-gpu-cu12
+rapidfuzz
+scikit-learn
+pandas
+pyarrow
+numpy
+torch

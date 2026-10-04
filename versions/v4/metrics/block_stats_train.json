@@ -1,0 +1,77 @@
+{
+  "pool_per_s1": 92.26553535606196,
+  "recall_union": 0.9907819278078489,
+  "ann_recall_vs_exact": {},
+  "routes": {
+    "dense_fwd": {
+      "recall": 0.961049910550229,
+      "only_this_route": 0.0008602626347392406,
+      "pairs_per_s1": 25.0
+    },
+    "dense2_fwd": {
+      "recall": 0.9626969907827133,
+      "only_this_route": 0.0003407797349301847,
+      "pairs_per_s1": 25.0
+    },
+    "dense_rev": {
+      "recall": 0.9754789146630202,
+      "only_this_route": 0.0007611576561214344,
+      "pairs_per_s1": 23.38254665874577
+    },
+    "dense2_rev": {
+      "recall": 0.979813088272163,
+      "only_this_route": 0.0016085903200488585,
+      "pairs_per_s1": 23.38254665874577
+    },
+    "name_c3": {
+      "recall": 0.6263759325457738,
+      "only_this_route": 0.0009039892699550231,
+      "pairs_per_s1": 19.574056980606944
+    },
+    "addr_c3": {
+      "recall": 0.8090160656108997,
+      "only_this_route": 0.0007567064417581511,
+      "pairs_per_s1": 6.609982866757204
+    },
+    "sparse": {
+      "recall": 0.4851872095664452,
+      "only_this_route": 0.0001568398472709801,
+      "pairs_per_s1": 15.61347250184768
+    },
+    "k_core": {
+      "recall": 0.4411466328199818,
+      "only_this_route": 0.0,
+      "pairs_per_s1": 4.119198158799468
+    },
+    "k_compact": {
+      "recall": 0.4644636646716935,
+      "only_this_route": 5.891313127874879e-06,
+      "pairs_per_s1": 4.276696206896708
+    },
+    "k_sorted": {
+      "recall": 0.4575521070281402,
+      "only_this_route": 1.3091806950833064e-07,
+      "pairs_per_s1": 4.355854416828551
+    },
+    "k_skel": {
+      "recall": 0.449471843778086,
+      "only_this_route": 6.0353230043340425e-05,
+      "pairs_per_s1": 5.085541147197711
+    },
+    "k_akey": {
+      "recall": 0.376168067380912,
+      "only_this_route": 2.3565252511499515e-06,
+      "pairs_per_s1": 1.7082314333604764
+    },
+    "k_numset": {
+      "recall": 0.1541538012388777,
+      "only_this_route": 4.582132432791573e-05,
+      "pairs_per_s1": 1.6314445077330695
+    }
+  },
+  "by_country": {
+    "US": 0.99293178016836,
+    "India": 0.9875650482720846
+  },
+  "entities_all_found": 0.9679574615540413
+}
