@@ -1,0 +1,18 @@
+# Python 3.12, one NVIDIA GPU (CUDA). Runtime versions follow the AWS SageMaker
+# container pytorch-training:2.9.0-gpu-py312-cu130-ubuntu22.04, which provides torch/numpy/scipy/sklearn.
+# Licences: MIT / Apache-2.0 / BSD / ISC.
+torch==2.9.0
+numpy==2.5.3
+scipy==1.18.1
+scikit-learn==1.9.0
+pyarrow==25.0.1
+polars==1.44.2
+rapidfuzz==3.14.6
+xgboost==3.4.1
+lightgbm==4.7.0
+sentence-transformers==6.1.0
+transformers==5.17.0
+jellyfish==1.2.1
+anyascii==0.3.3
+faiss-cpu==1.15.1
+boto3==1.43.89          # only for the optional SageMaker helpers
