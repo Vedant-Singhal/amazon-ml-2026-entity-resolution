@@ -1,3 +1,8 @@
+> **Archived copy** of the methodology submitted with the final package (September 2026), kept as submitted.
+> In this repository the code is in [`pipeline/`](../pipeline/), the visual guides are in [`visuals/`](../visuals/),
+> and the output TSVs are not stored. The auxiliary matcher takes about 5 h on one GPU machine (measured stages:
+> 310 min), not the 1–2 h stated below. The maintained description is [`02-solution.md`](02-solution.md).
+
 # ML Challenge 2026: Business Entity Resolution Solution
 
 **Team Name:** 4Miracles

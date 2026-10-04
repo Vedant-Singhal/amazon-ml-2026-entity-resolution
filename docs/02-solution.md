@@ -55,7 +55,7 @@ flowchart TD
 | **7 · stage 2** | `ber/train.py`, `learner.py` | XGBoost on GPU (lr 0.05, ≤ 5,000 trees, early stopping, depth 9), isotonic calibration → `p2`; per-S1 "has any match" model | macro F0.5 0.9888 |
 | **8 · cross-encoder** | `ber/crossenc.py` | `multilingual-e5-small` + 1-logit head reads both records together, only for unsure pairs (0.02 ≤ p2 ≤ 0.98); 2-fold cross-fitted → `p_ce` | |
 | **9 · graph** | `ber/graph.py` | Does another S1 want this record more? Does it resemble the S1's strong siblings (p2 ≥ 0.5), including those from the other source? | |
-| **10 · stage 3** | `ber/stage3.py` | XGBoost stacked on the features + `p2` + `p_ce` + 7 graph features + `p_v2`, minus 8 count features whose meaning changes with candidate density; same folds; isotonic → final `p` | **macro F0.5 0.9913** (US 0.9908, India 0.9921) |
+| **10 · stage 3** | `ber/stage3.py` | XGBoost on 105 inputs: the 101 pair features minus 5 candidate-count features, plus `p2`, `p_ce`, 6 graph features (3 count-based ones dropped) and `p_v2`; counts whose meaning changes with candidate density are left out. Same folds; isotonic → final `p` | **macro F0.5 0.9913** (US 0.9908, India 0.9921) |
 | **11 · decision** | `ber/decide.py` | Each S2/S3 record goes to its highest-p S1; keep pairs with p ≥ 0.95 | LB **0.984312** |
 
 ![Stage-3 feature gain](../assets/stage3_feature_gain.png)

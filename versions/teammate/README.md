@@ -29,4 +29,5 @@ The teammate's later submission scored 0.964. Its code is not part of this archi
 A self-contained CPU pipeline draft (polars, anyascii, RapidFuzz, sparse top-n TF-IDF, FAISS, LightGBM / XGBoost). It
 includes exact-key "rescue" candidates, cross-source agreement features and two-stage stacking. We did not run it.
 Note that its stacking trains the second stage on in-sample first-stage scores; use out-of-fold scores, as the main
-pipeline does, to avoid leakage. Set `ER_DATA_DIR` to the dataset folder to run it.
+pipeline does, to avoid leakage. To run it: `pip install -r requirements.txt`, then
+`ER_DATA_DIR=/path/to/dataset python entity_resolution_single_file.py`.

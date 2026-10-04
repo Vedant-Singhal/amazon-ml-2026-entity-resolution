@@ -332,7 +332,7 @@ g3 = max_{b' ∈ Sib(a)} cos(b, b')    Sib(a) = { b' : p2(a, b') ≥ 0.5 }   (al
     <p class="plain-p">One more model takes the measurements plus every earlier opinion (main matcher, careful reader, group check,
       second-opinion matcher) and gives the final probability.</p>
     <div class="tech"><span class="lbl">Technical</span>
-      <div class="f">x = [ features (minus 8 density-dependent counts), p2, p_ce, g1..g7, p_v2 ]  →  XGBoost  →  isotonic  →  p</div>
+      <div class="f">x = [ 96 pair features (5 candidate counts dropped), p2, p_ce, g1..g6, p_v2 ]   (105 inputs)  →  XGBoost  →  isotonic  →  p</div>
       <div>105 inputs, same folds (leak-free stacking), ~800 trees per fold, final 886. Gain share: p2 69%, p_v2 17.5%, p1 8.4%, p_ce
         2.7%, graph ≈ 0.7%.</div>
       <div class="chips"><span class="chip m">XGBoost + has-any-match</span><span class="chip">xgboost</span><span class="chip">scikit-learn</span><span class="chip r">score 0.9913</span></div></div>

@@ -133,7 +133,7 @@ $$g_1=\max_{a'\ne a}p_2(a',b),\qquad g_2=\max_{b'\ne b}p_2(a,b'),\qquad g_3=\max
   its would-be siblings, which is supportive.</p>
 
 <h2><span class="n">10</span>Stage 3: the stack</h2>
-$$x^{(3)}=\big[\,x^{(6)},\ p_2,\ p_{ce},\ g_1..g_7,\ p_{v2}\,\big]\ \xrightarrow{\ \text{XGBoost, same folds}\ }\ \hat p\ \xrightarrow{\ \text{isotonic}\ }\ p$$
+$$x^{(3)}=\big[\,x^{(6)},\ p_2,\ p_{ce},\ g_1..g_6,\ p_{v2}\,\big]\ \xrightarrow{\ \text{XGBoost, same folds}\ }\ \hat p\ \xrightarrow{\ \text{isotonic}\ }\ p$$
 <p>Here $p_{v2}$ is the auxiliary matcher's out-of-fold score (LightGBM on 44 features; its own $F_{0.5}=0.9781$). Counts
   that depend on candidate density are dropped, because the density differs on test. Out-of-fold macro $F_{0.5}=0.9913$.
   Share of the model's gain: $p_2$ 69%, $p_{v2}$ 17.5%, $p_1$ 8.4%, $p_{ce}$ 2.7%.</p>

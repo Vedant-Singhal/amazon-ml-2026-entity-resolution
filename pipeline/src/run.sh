@@ -1,11 +1,21 @@
 #!/usr/bin/env bash
 # End to end on one Linux GPU machine: data -> v2 -> v4 -> v5a -> 0.7/0.3 blend -> submission/.
-#   DATA=/path/to/dataset ./src/run.sh     dataset/{train,test}/*.tsv (default: ./dataset)
-#   SMOKE=1 DATA=... ./src/run.sh          quick check on a 10k-S1 sample (separate *_smoke folders)
+#   DATA=/path/to/dataset bash src/run.sh  folder holding train/ and test/ (default: pipeline/dataset or ../dataset)
+#   SMOKE=1 bash src/run.sh                quick check on a 10k-S1 sample (separate *_smoke folders)
+# Run from anywhere; work folders and submission/ are created inside pipeline/.
 # Every stage caches its result in its work folder: a restart resumes where it stopped.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-DATA=$(cd "${DATA:-dataset}" && pwd)
+if [ -z "${DATA:-}" ]; then
+  for d in dataset ../dataset; do
+    if [ -d "$d/train" ] && [ -d "$d/test" ]; then DATA=$d; break; fi
+  done
+fi
+if [ -z "${DATA:-}" ] || [ ! -f "$DATA/test/test_source1.tsv" ]; then
+  echo "Dataset not found. Set DATA to the folder holding train/ and test/ (e.g. DATA=/data/dataset)." >&2
+  exit 1
+fi
+DATA=$(cd "$DATA" && pwd)
 SFX=""
 SMOKE_ENV=()
 if [ "${SMOKE:-0}" = "1" ]; then
@@ -32,11 +42,11 @@ env "${COMMON[@]}" BER_WORK="$W4" BER_OUT="output_v4$SFX" BER_V4_RETRIEVER=1 BER
 #    dropped (test-like orphan density), abbreviations mined per country from the records, 3,000 stage-1 trees
 for s in train test; do
   mkdir -p "$W5/$s"
-  for f in pool.parquet route_ft.parquet block_stats.json emb_oth.npy; do
-    [ -f "$W5/$s/$f" ] || cp "$W4/$s/$f" "$W5/$s/$f"
+  for f in pool.parquet route_ft.parquet block_stats.json emb_oth.npy; do   # block_stats.json exists for train only
+    if [ -f "$W4/$s/$f" ] && [ ! -f "$W5/$s/$f" ]; then cp "$W4/$s/$f" "$W5/$s/$f"; fi
   done
 done
-[ -f "$W5/timing.json" ] || cp "$W4/timing.json" "$W5/timing.json"
+if [ -f "$W4/timing.json" ] && [ ! -f "$W5/timing.json" ]; then cp "$W4/timing.json" "$W5/timing.json"; fi
 env "${COMMON[@]}" BER_WORK="$W5" BER_OUT="output_v5a$SFX" BER_V4_RETRIEVER=0 python src/run_v5.py
 
 # 4) final: p = 0.7 * p_v4 + 0.3 * p_v5a, one S1 per record, cut at v4@0.95's pair count -> submission/

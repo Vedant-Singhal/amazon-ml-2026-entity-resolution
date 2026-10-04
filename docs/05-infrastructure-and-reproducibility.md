@@ -1,32 +1,124 @@
 # 5. Infrastructure and reproducibility
 
-## Compute
+There are three ways to run the project, from cheapest to complete:
 
-Every full run was an **AWS SageMaker training job** (us-east-1) using the PyTorch 2.9 / Python 3.12 / CUDA 13 training
-container. The launcher is [`pipeline/src/sagemaker/launch.ps1`](../pipeline/src/sagemaker/launch.ps1); fill in
-`account.ps1` (region, bucket, execution role) first.
+| option | needs | runs | time |
+|---|---|---|---|
+| **A. Final blend only** | any computer, Python with `numpy` + `pyarrow` | `pipeline/src/run_final.py` on the two models' test-score files | ≈ 3 min |
+| **B. Full pipeline on your own GPU machine** | Linux (or WSL2), 1 NVIDIA GPU ≥ 24 GB, 256 GB RAM, 400 GB disk | `pipeline/src/run.sh`: auxiliary matcher → Model A → Model B → blend | ≈ 13–15 h |
+| **C. Full pipeline on AWS SageMaker** | an AWS account with GPU training quota, an S3 bucket, an execution role, the AWS CLI | the same stages as training jobs | ≈ 13–15 h of GPU time |
+
+The competition data is **not in this repository** (it belongs to the organizers and is about 2.5 GB). Put it in
+`dataset/` at the repository root, where `.gitignore` keeps it out of git:
+
+```
+dataset/train/{train_source1,train_source2,train_source3,train_ground_truth}.tsv
+dataset/test/{test_source1,test_source2,test_source3}.tsv
+```
+
+## A. Reproduce the submitted file from the two models' scores
+
+`run_final.py` needs only `numpy` and `pyarrow`. Given Model A's and Model B's test scores
+(`work_*/test/scored3.parquet`, written by the full pipeline) it rebuilds `matching_results.tsv` and
+`candidate_pairs.tsv`. We checked it on this repository's code: the output is **byte-identical** to the uploaded
+0.984403 submission, and with `FINAL_CHECK=1` it reprints the training check that chose the weights (Model A 0.99021,
+blend 0.99031).
+
+```bash
+V4_WORK=path/to/work_v4 V5_WORK=path/to/work_v5a DATA=dataset FINAL_OUT=submission FINAL_CHECK=1 \
+    python pipeline/src/run_final.py
+```
+
+`FINAL_CHECK=1` also needs each run's `model3/oof.parquet` and `dataset/train/train_ground_truth.tsv`.
+
+## B. Full pipeline on your own GPU machine
+
+1. **Environment** (Python 3.12):
+   ```bash
+   python -m venv .venv && source .venv/bin/activate
+   # install the PyTorch build that matches your CUDA driver (see pytorch.org), then:
+   pip install -r pipeline/requirements.txt
+   ```
+2. **Data:** place it in `dataset/` at the repository root, or point `DATA` at any folder holding `train/` and
+   `test/`.
+3. **Smoke test** on a 10k-S1 sample (about 30 minutes), then the **full run**:
+   ```bash
+   SMOKE=1 bash pipeline/src/run.sh        # writes *_smoke folders
+   bash pipeline/src/run.sh                # writes pipeline/work_*/, output_*/ and pipeline/submission/
+   ```
+   Every stage caches its outputs, so an interrupted run resumes at the first missing stage. Models download from
+   Hugging Face on first use.
+4. **Validate** with the organizers' `validate_submission.py` (shipped with the challenge data):
+   `python validate_submission.py -m pipeline/submission/matching_results.tsv -c pipeline/submission/candidate_pairs.tsv -t dataset/test`
+
+Resources: peak ≈ 140 GB RAM during stage-1 training; ≈ 400 GB of cached stages for both models. The code uses 50%
+of the CPU cores (`BER_CPU_FRAC=0.7` for 70%).
+
+## C. Full pipeline on AWS SageMaker with your own account
+
+The helpers are PowerShell scripts in [`pipeline/src/sagemaker/`](../pipeline/src/sagemaker/) (Windows PowerShell, or
+`pwsh` on Linux/macOS). They package `pipeline/src` + `requirements.txt`, start a training job in the
+`pytorch-training:2.9.0-gpu-py312-cu130` container, and keep every stage in an S3 checkpoint per run name, so a
+relaunch with the same `-RunName` resumes.
+
+**Prerequisites**
+- **SageMaker training-job quota** for a GPU instance. We used `ml.g6e.16xlarge` (1× L40S, 64 vCPU, 512 GB);
+  `ml.g6.16xlarge` (1× L4) also works.
+- **An S3 bucket** and **a SageMaker execution role** that can read and write it (e.g. `AmazonSageMakerFullAccess`).
+- **AWS CLI v2** configured with credentials (`aws configure`, or a named profile) allowed to call
+  `sagemaker:CreateTrainingJob`, `iam:PassRole` on that role, and S3 on the bucket.
+
+**Steps** (from the `pipeline/` folder)
+
+1. Fill in `src/sagemaker/account.ps1`: `$Region`, `$Bucket`, `$Role`, `$Prefix`, and optionally
+   `$env:AWS_PROFILE`. No credentials go in any file; the AWS CLI provides them.
+2. Upload the data: `aws s3 sync ../dataset s3://<bucket>/<prefix>/dataset/`
+3. **Auxiliary matcher (v2)**. It reads its data path from `BER_DATA`:
+   ```powershell
+   .\src\sagemaker\launch.ps1 -RunName v2 -Program v2/run_pipeline.py -InstanceType ml.g6e.16xlarge -MaxHours 8 `
+       -ExtraEnv "BER_DATA=/opt/ml/input/data/dataset"
+   ```
+   Then stage its scores where Model A and Model B read them:
+   ```bash
+   aws s3 cp s3://<bucket>/<prefix>/ber-runs/v2/work/model/oof.parquet    s3://<bucket>/<prefix>/ber-runs/v4/v2in/oof/oof.parquet
+   aws s3 cp s3://<bucket>/<prefix>/ber-runs/v2/work/test/scored.parquet  s3://<bucket>/<prefix>/ber-runs/v4/v2in/test/scored.parquet
+   ```
+4. **Model A (v4)**:
+   ```powershell
+   .\src\sagemaker\launch.ps1 -RunName v4 -Program run_v4.py -InstanceType ml.g6e.16xlarge -MaxHours 9 -V2Inputs `
+       -ExtraEnv "BER_EMB_MODELS=intfloat/multilingual-e5-small,intfloat/multilingual-e5-large;BER_ANN_MIN=1000000000;BER_SL_KEEP=0.999;BER_V4_RETRIEVER=1;BER_V4_EXTRA_T=0.95;PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True"
+   ```
+5. **Model B (v5a)**, reusing Model A's candidate pool and v2 scores:
+   ```powershell
+   .\src\sagemaker\launch.ps1 -RunName v5a -Program run_v5.py -InstanceType ml.g6e.16xlarge -MaxHours 6 -V2Inputs -V2Run v4 `
+       -ExtraEnv "BER_SEED_FROM=s3://<bucket>/<prefix>/ber-runs/v4/work;BER_SEED_SET=reprep;BER_V4_RETRIEVER=0"
+   ```
+6. **Blend** (option A) after downloading the two score files:
+   ```bash
+   for r in v4 v5a; do
+     aws s3 cp s3://<bucket>/<prefix>/ber-runs/$r/work/test/scored3.parquet  runs/$r/work/test/scored3.parquet
+     aws s3 cp s3://<bucket>/<prefix>/ber-runs/$r/work/model3/oof.parquet    runs/$r/work/model3/oof.parquet
+   done
+   V4_WORK=runs/v4/work V5_WORK=runs/v5a/work DATA=../dataset FINAL_CHECK=1 python src/run_final.py
+   ```
+   `src/sagemaker/fetch.ps1 -RunName <run>` downloads a run's submission files and small reports.
+
+Add `-SmokeS1 10000` to any launch to run that stage chain on a sample first. Logs:
+`aws logs tail /aws/sagemaker/TrainingJobs --log-stream-name-prefix ber-<run> --follow`.
+
+## Compute we used
 
 | instance | GPU | vCPU / RAM | used for | on-demand price |
 |---|---|---|---|---|
 | ml.g6.16xlarge | 1× L4 24 GB | 64 / 256 GB | v2 full run, smoke tests, v5c | ≈ $4.25/h |
 | ml.g6e.8xlarge | 1× L40S 48 GB | 32 / 256 GB | v3 full run, embedder ablations | ≈ $5.66/h |
-| ml.g6e.16xlarge | 1× L40S 48 GB | 64 / 512 GB | v4, v5a, retriever, ensemble checks | ≈ $9.47/h |
+| ml.g6e.16xlarge | 1× L40S 48 GB | 64 / 512 GB | v4, v5a, retriever, blend checks | ≈ $9.47/h |
 | ml.g5.16xlarge | 1× A10G 24 GB | 64 / 256 GB | fallback when L40S capacity was short | |
 | ml.g4dn.2xlarge | 1× T4 16 GB | 8 / 32 GB | small analysis jobs | ≈ $1/h |
 
 Typical cost per full run: v2 ≈ $22 (5.2 h), v4 ≈ $20 (2.1 h billed on top of cached stages).
 
-**How jobs were run:**
-- **Smoke test first.** Every configuration ran on a 10k-S1 sample (`BER_SMOKE_S1=10000`) before the full run, and
-  the smoke run also estimated the full runtime ([`versions/v3/reports/smoke_runtime_estimate.md`](../versions/v3/reports/smoke_runtime_estimate.md)).
-- **Checkpoint and resume.** Each stage writes its outputs to a work folder synced to an S3 checkpoint per run name,
-  so a restarted job resumes at the first missing stage.
-- **Seeding.** A new run can copy finished stages from an earlier run inside AWS (`BER_SEED_FROM`, with
-  `BER_SEED_SET=pool` or `reprep`), e.g. Model B reused Model A's candidate pool.
-- **Half the machine.** Threads and worker pools use 50% of the cores by default (`BER_CPU_FRAC`, 0.7 for the deadline
-  runs), so memory or CPU spikes cannot take a job down.
-
-## Runtimes
+**Measured stage times**
 
 | stage | v2 (L4, 32 cores) | v4 (L40S, 32 cores) |
 |---|---|---|
@@ -38,40 +130,13 @@ Typical cost per full run: v2 ≈ $22 (5.2 h), v4 ≈ $20 (2.1 h billed on top o
 | stage 2 | 102 min (LightGBM, CPU) | 20 min (XGBoost, GPU) |
 | cross-encoder / graph / stage 3 | — | 25 / 1 / 11 min |
 
-From raw files, the full chain takes roughly: v2 4–5 h, v4 6–7 h, v5a ≈ 3 h (it reuses v4's pool), blend 2 min.
-
-## Reproducing the submission
-
-Everything needed is in [`pipeline/`](../pipeline/) ([`pipeline/README.md`](../pipeline/README.md) has the
-details):
-
-```bash
-cd pipeline
-pip install -r requirements.txt
-SMOKE=1 DATA=/path/to/dataset bash src/run.sh   # 10k-S1 sample of the whole chain
-DATA=/path/to/dataset bash src/run.sh           # full run -> submission/
-```
-
-`src/run.sh` runs the auxiliary matcher (v2), Model A (`run_v4.py`), Model B (`run_v5.py`, reusing Model A's pool) and
-the blend (`run_final.py`). The blend step reproduces the submitted `matching_results.tsv` byte for byte from the two
-models' test scores. Seeds are fixed (13), but GPU training (XGBoost `hist`, transformer fine-tuning, fp16
-embeddings) is not bit-exact, so a fresh end-to-end run lands very close to the submitted scores rather than
-identical.
-
-**How the leaderboard runs were actually executed.** The pipeline was developed in versions, so the submitted Model A
-run reused cached stages instead of starting from raw files. Its normalization, embeddings and candidate search came
-from the v3 run (same code), and its retriever routes from a separate job. Model A then merged them and computed
-stage 1 → stage 3, and Model B reused Model A's pool. `src/run.sh` performs the same sequence in one go. The whole
-chain was tested end to end on the 10k-S1 sample.
-
-## Data
-
-The competition data is **not included** (it belongs to the organizers). Place it as:
-
-```
-dataset/train/{train_source1,train_source2,train_source3,train_ground_truth}.tsv
-dataset/test/{test_source1,test_source2,test_source3}.tsv
-```
+**How the leaderboard runs were executed.** The pipeline was developed in versions, so the submitted Model A run reused
+cached stages instead of starting from raw files. Its normalization, embeddings and candidate search came from the v3
+run (same code), and its retriever routes from a separate job. Model A then merged them and computed stage 1 → stage
+3, and Model B reused Model A's pool. `run.sh` performs the same sequence in one go, and the whole chain was tested end
+to end on the 10k-S1 sample. Seeds are fixed (13), but GPU training (XGBoost `hist`, transformer fine-tuning, fp16
+embeddings) is not bit-exact. A fresh end-to-end run therefore lands very close to the submitted scores rather than
+identical; the blend step alone (option A) is exact.
 
 ## Compliance
 
@@ -82,3 +147,5 @@ dataset/test/{test_source1,test_source2,test_source3}.tsv
   retriever and cross-encoder derived from e5-small. All far below the 8B limit.
 - **Software:** MIT, Apache-2.0, BSD or ISC licences only. Transliteration uses `anyascii` (ISC).
 - **`country`** only partitions the search. It is never a feature and never hard-coded.
+- **No credentials in the repository:** the SageMaker helpers read account settings from `account.ps1`
+  (placeholders) and credentials from the AWS CLI.

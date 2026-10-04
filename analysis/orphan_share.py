@@ -1,9 +1,11 @@
 """Orphan records: S2/S3 records that belong to no S1 in the split. Train: from GT. Test: estimated from v4's predictions
 (records v4 matches to some S1) — and the ratio of records per S1, per country."""
 import csv
+import os
 from collections import Counter
 csv.field_size_limit(10**9)
-R = "dataset/"
+ROOT = os.environ.get("BER_ROOT", "./")          # folder holding dataset/ and the v4 run outputs
+R = ROOT + "dataset/"
 
 def countries(path):
     c = Counter(); ids = {}
@@ -23,7 +25,7 @@ def matched(path):
             if m: s.update(m.split(","))
     return s
 
-for split, mfile in (("train", R + "train/train_ground_truth.tsv"), ("test", "v4/output/matching_results.tsv")):
+for split, mfile in (("train", R + "train/train_ground_truth.tsv"), ("test", ROOT + "v4/output/matching_results.tsv")):
     c1, id1 = countries(R + f"{split}/{split}_source1.tsv")
     c2, id2 = countries(R + f"{split}/{split}_source2.tsv")
     c3, id3 = countries(R + f"{split}/{split}_source3.tsv")

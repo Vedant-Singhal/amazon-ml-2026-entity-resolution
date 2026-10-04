@@ -108,7 +108,9 @@ ax.plot([0.30, 0.70, 0.95], [0.958, 0.97493, 0.978], color=ORANGE, lw=2, marker=
 ax.plot([0.70, 0.95, 0.99], [0.983, 0.984312, 0.980], color=BLUE, lw=2, marker="o", ms=7, mec="white", mew=2,
         label="v4")
 for xv, yv in ((0.30, 0.958), (0.70, 0.97493), (0.95, 0.978), (0.70, 0.983), (0.95, 0.984312), (0.99, 0.980)):
-    ax.annotate(f"{yv:g}", (xv, yv), textcoords="offset points", xytext=(0, 9), ha="center", fontsize=9.5, color=INK)
+    lab = f"{yv:.6f}".rstrip("0")
+    lab = lab if len(lab.split(".")[1]) >= 3 else f"{yv:.3f}"
+    ax.annotate(lab, (xv, yv), textcoords="offset points", xytext=(0, 9), ha="center", fontsize=9.5, color=INK)
 ax.set_xticks([0.30, 0.50, 0.70, 0.95, 0.99], ["0.30", "0.50", "0.70\n(train-tuned rule)", "0.95", "0.99"])
 ax.set_xlim(0.25, 1.02)
 ax.set_ylim(0.955, 0.988)

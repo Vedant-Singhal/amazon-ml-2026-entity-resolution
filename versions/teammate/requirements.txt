@@ -1,0 +1,11 @@
+# Teammate single-file pipeline (CPU). Versions were not recorded; these are the packages it imports.
+polars
+numpy
+anyascii
+rapidfuzz
+sparse-dot-topn
+scikit-learn
+faiss-cpu
+lightgbm
+xgboost
+joblib

@@ -44,8 +44,9 @@ The code uses 50% of the CPU cores by default. `BER_CPU_FRAC=0.7` raises that to
 
 ```bash
 pip install -r requirements.txt
-SMOKE=1 DATA=/path/to/dataset bash src/run.sh  # optional: 10k-S1 sample of the whole chain (separate *_smoke folders)
-DATA=/path/to/dataset bash src/run.sh          # full run -> submission/
+SMOKE=1 bash src/run.sh   # 10k-S1 sample of the whole chain first (separate *_smoke folders)
+bash src/run.sh           # full run -> submission/
+# the dataset is found in pipeline/dataset or ../dataset; otherwise set DATA=/path/to/dataset
 ```
 
 `src/run.sh` runs four steps. Each step caches its stages, so a restart resumes where it stopped.
@@ -95,10 +96,9 @@ cached stages instead of starting from the raw files:
 `src/run.sh` performs the same stage sequence from the provided raw files. A 10k-S1 sample of the chain was tested end to
 end with `SMOKE=1`; the full-size leaderboard runs reused the cached stages described above.
 
-**SageMaker (optional).** Use `src/sagemaker/launch.ps1` and `src/sagemaker/fetch.ps1` after filling in `src/sagemaker/account.ps1` (region,
-bucket, execution role). Run v4 with `-Program run_v4.py` and v5a with `-Program run_v5.py`, each with `-V2Inputs`
-(v2's scores uploaded to `<prefix>/ber-runs/<run>/v2in/{oof,test}/`). v5a can seed v4's pool with
-`BER_SEED_FROM=s3://<bucket>/<prefix>/ber-runs/v4/work` and `BER_SEED_SET=reprep`.
+**SageMaker (optional).** `src/sagemaker/launch.ps1` runs any entry point as a training job with your own AWS
+account (fill in `src/sagemaker/account.ps1`; credentials come from the AWS CLI). The step-by-step commands for v2,
+v4, v5a and the blend are in [`docs/05`](../docs/05-infrastructure-and-reproducibility.md#c-full-pipeline-on-aws-sagemaker-with-your-own-account).
 
 ## 3. Pipeline (shared by v4 and v5a)
 

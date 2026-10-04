@@ -97,16 +97,25 @@ blends, negative results)
 └── scripts/             make_figures.py
 ```
 
+Every top-level folder has its own README describing its contents.
+
 ## Reproduce
 
+Put the competition data in `dataset/{train,test}/` at the repository root (it is git-ignored), then:
+
 ```bash
-cd pipeline
-pip install -r requirements.txt
-SMOKE=1 DATA=/path/to/dataset bash src/run.sh   # 10k-S1 sample of the whole chain first
-DATA=/path/to/dataset bash src/run.sh           # full run (1 GPU, ≈ 13–15 h) -> submission/
+pip install -r pipeline/requirements.txt      # after installing the CUDA build of PyTorch
+SMOKE=1 bash pipeline/src/run.sh               # 10k-S1 sample of the whole chain (≈ 30 min)
+bash pipeline/src/run.sh                       # full run on one GPU (≈ 13–15 h) -> pipeline/submission/
 ```
 
-The competition data is not included. → [docs/05 · infrastructure and reproducibility](docs/05-infrastructure-and-reproducibility.md)
+| how | needs | time |
+|---|---|---|
+| final blend only (`pipeline/src/run_final.py`): verified to rebuild the submitted file byte for byte | numpy + pyarrow, the two models' test scores | ≈ 3 min |
+| full pipeline on your own machine (`pipeline/src/run.sh`) | Linux/WSL2, 1 NVIDIA GPU ≥ 24 GB, 256 GB RAM, 400 GB disk | ≈ 13–15 h |
+| full pipeline on AWS SageMaker (`pipeline/src/sagemaker/`) | your AWS account: GPU training quota, S3 bucket, execution role, AWS CLI | ≈ 13–15 h GPU |
+
+Step-by-step commands for all three: [docs/05 · infrastructure and reproducibility](docs/05-infrastructure-and-reproducibility.md).
 
 ## Team
 
