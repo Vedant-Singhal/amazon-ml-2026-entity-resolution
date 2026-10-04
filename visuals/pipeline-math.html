@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>v4 Pipeline Mathematics</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+<style>
+:root { --page:#f7f7f5; --card:#ffffff; --ink:#15171a; --ink-2:#4d525a; --muted:#7b8089; --line:#dcdcd6; --accent:#2a64c4; --accent-bg:#eaf0fb; }
+@media (prefers-color-scheme: dark) {
+  :root { color-scheme: dark; --page:#101113; --card:#191b1e; --ink:#eef0f3; --ink-2:#c3c7ce; --muted:#8e939c; --line:#2d3035; --accent:#79a6ee; --accent-bg:#1b2940; }
+}
+* { box-sizing: border-box; }
+body { margin:0; background:var(--page); color:var(--ink); font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; }
+.wrap { max-width: 860px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 56px; }
+h1 { font-size: 28px; margin: 0 0 6px; text-wrap: balance; }
+h2 { font-size: 19px; margin: 34px 0 8px; padding-top: 14px; border-top: 1px solid var(--line); }
+h2 .n { color: var(--accent); margin-right: 8px; font-variant-numeric: tabular-nums; }
+p, li { max-width: 72ch; }
+.lede { color: var(--ink-2); }
+.why { background: var(--accent-bg); border-radius: 8px; padding: 8px 12px; color: var(--ink); font-size: 15px; }
+.set { color: var(--ink-2); font-size: 14.5px; }
+code { font: 13.5px ui-monospace, Consolas, monospace; }
+.katex-display { overflow-x: auto; overflow-y: hidden; padding: 4px 0; }
+table { border-collapse: collapse; font-size: 14.5px; margin: 8px 0; }
+th, td { border-bottom: 1px solid var(--line); padding: 5px 10px; text-align: left; }
+.tw { overflow-x: auto; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>How v4 works, mathematically</h1>
+<p class="lede">Notation: $a$ is an S1 record, $b$ an S2/S3 record, $c(\cdot)$ its country label, $G$ the set of true
+  pairs in train, $y_{ab}\in\{0,1\}$ whether $(a,b)\in G$. Settings are the ones in the submitted run.</p>
+
+<h2><span class="n">0</span>The metric we optimize</h2>
+<p>For each S1 with predicted set $M(a)$ and true set $T(a)$: $TP=|M\cap T|$, $FP=|M\setminus T|$, $FN=|T\setminus M|$.</p>
+$$F_{0.5}(a)=\frac{(1+\beta^2)\,TP}{(1+\beta^2)\,TP+\beta^2 FN+FP}=\frac{1.25\,TP}{1.25\,TP+0.25\,FN+FP},\qquad F_{0.5}(a)=1 \text{ if } T(a)=M(a)=\varnothing$$
+$$\text{Score}=\frac{1}{N}\sum_{a=1}^{N}F_{0.5}(a),\qquad N=1{,}732{,}544 \text{ test S1}$$
+<p class="why">A false pair costs about 3× a missed pair. For an S1 with 3 true matches, one extra wrong match gives
+  $3.75/4.75=0.79$, while one missed match gives $2.5/2.75=0.91$. So every step is built for precision.</p>
+
+<h2><span class="n">1</span>Clean the text: a lexicon learned from the answers</h2>
+<p>For every true pair $(a,b)\in G$, let $U_b$ be the units (words or two-word phrases) of $b$ that are not in $a$, and
+  $V_a$ the units of $a$ that are not in $b$. Count co-occurrences:</p>
+$$n(u\to v)=\sum_{(a,b)\in G}\mathbf 1[u\in U_b,\ v\in V_a],\qquad n(u)=\sum_{(a,b)\in G}\mathbf 1[u\in U_b]$$
+$$\text{keep } u\to v^*(u)=\arg\max_v n(u\to v)\quad\text{if}\quad n(u\to v^*)\ge 20\ \text{ and }\ \frac{n(u\to v^*)}{n(u)}\ge 0.5$$
+<p>Generic words per country: $w$ is generic if $\mathrm{df}_c(w)=\frac{|\{\text{names of country }c\text{ containing }w\}|}{N_c}\ge 0.01$.
+  The core name is the name minus generic words (keeping at least 2 words).</p>
+<p class="why">Example: in train, when S2 says <code>ap</code> the S1 says <code>andhra pradesh</code> far more than half the time,
+  so <code>ap → andhra pradesh</code> is kept. Nothing is typed by hand.</p>
+
+<h2><span class="n">2</span>Embeddings</h2>
+<p>Each record's text $x=$ "name | address" goes through e5-small and e5-large (fp16, ≤ 64 tokens), and the output is
+  normalized to unit length:</p>
+$$e(x)=\frac{f_\theta(x)}{\lVert f_\theta(x)\rVert_2},\qquad \cos(a,b)=e(a)^\top e(b)\in[-1,1]$$
+
+<h2><span class="n">3</span>Candidate search (blocking), within each country</h2>
+<p><b>Dense, both directions</b> (for each of the two embedders):</p>
+$$N_{\text{fwd}}(a)=\operatorname{top}_{25}\{\cos(a,b): c(b)=c(a)\},\qquad N_{\text{rev}}(b)=\operatorname{top}_{5}\{\cos(a,b): c(a)=c(b)\}$$
+<p>A pair enters the pool if $b\in N_{\text{fwd}}(a)$ or $a\in N_{\text{rev}}(b)$. Both ranks are kept as features.</p>
+<p><b>Character 3-gram sketch.</b> The TF-IDF vector $t(x)\in\mathbb R^{2^{20}}$ of a record's 3-grams is compressed to 256
+  numbers with random hash functions $h$ (bucket) and $\sigma$ (sign ±1):</p>
+$$s_j(x)=\sum_{g:\,h(g)=j}\sigma(g)\,t_g(x),\quad j=1..256,\qquad \mathbb E[s(a)^\top s(b)]=t(a)^\top t(b)$$
+<p>So a 256-dimensional dot product approximates the full TF-IDF cosine (error about $1/\sqrt{256}$), and the same GPU
+  search finds the top 10 per S1 and 3 per record.</p>
+<p><b>Rare shared keys.</b> With $\mathrm{idf}(k)=\log\frac{N}{\mathrm{df}(k)}$ over name words, address words and numbers (keys with df ≤ 500):</p>
+$$\mathrm{sp}(a,b)=\sum_{k\in K(a)\cap K(b)}\mathrm{idf}(k)\quad\to\quad\text{top 20 per S1}$$
+<p><b>Exact keys</b> (core, compact, sorted core, consonant skeleton, address + number, number set): pair $(a,b)$ if
+  $\mathrm{key}(a)=\mathrm{key}(b)$, skipping keys shared by more than 10 S1 or 50 records.</p>
+<p>The pool is the union of all routes, $P=\bigcup_r P_r$, with recall $R(P)=\frac{|P\cap G|}{|G|}=0.9908$ at 92 pairs per S1.</p>
+
+<h2><span class="n">4</span>Fine-tuned retriever (contrastive learning)</h2>
+<p>e5-small is trained on true pairs $(q_i,d_i)$. For a batch of $B=256$ pairs, every other record in the batch serves as
+  a negative (InfoNCE, scale $s=20$, learning rate $2\cdot10^{-5}$):</p>
+$$\mathcal L=-\frac1B\sum_{i=1}^{B}\log\frac{\exp\!\big(s\cos(q_i,d_i)\big)}{\sum_{j=1}^{B}\exp\!\big(s\cos(q_i,d_j)\big)}$$
+<p>This pulls true pairs together and pushes the others apart. On train it is cross-fitted: the model trained on S1s with
+  $h(a)\bmod 2=0$ searches for the S1s with $h(a)\bmod 2=1$, and vice versa. It adds its top 10 per S1 and top 3 S1 per
+  record: $R(P)=0.9964$ at 110 pairs per S1.</p>
+
+<h2><span class="n">5</span>Stage 1: gradient boosting and the shortlist</h2>
+<p><b>Gradient-boosted trees (XGBoost),</b> used in stages 1, 2 and 3. The score is a sum of $M$ regression trees, turned
+  into a probability by the sigmoid:</p>
+$$F(x)=\sum_{m=1}^{M}\eta\, f_m(x),\qquad p(x)=\sigma(F(x))=\frac{1}{1+e^{-F(x)}}$$
+<p>Trees are added one at a time to minimize log-loss plus a penalty on tree size:</p>
+$$\mathcal L=-\sum_i\big[y_i\log p_i+(1-y_i)\log(1-p_i)\big]+\sum_m\Big(\gamma T_m+\tfrac{\lambda}{2}\lVert w_m\rVert^2\Big)$$
+<p>Each new tree fits the gradient $g_i=p_i-y_i$ and curvature $h_i=p_i(1-p_i)$. A leaf $j$ gets the weight
+  $w_j=-\frac{\sum_{i\in j}g_i}{\sum_{i\in j}h_i+\lambda}$.</p>
+<p class="set">Stage 1: $\eta=0.1$, $M\le1{,}500$, depth 9, min child weight 5, row/column subsample 0.8, $\lambda=1$; 51 cheap
+  features (route ranks, cosines, key flags, quick similarities).</p>
+<p><b>Shortlist rule.</b> With $\operatorname{rank}_a(b)$ the rank of $b$ among $a$'s candidates by $p_1$, choose on out-of-fold $p_1$:</p>
+$$S(K,\tau)=\{(a,b)\in P:\ \operatorname{rank}_a(b)\le K,\ p_1(a,b)\ge\tau\},\qquad (K^*,\tau^*)=\arg\min_{K,\tau}\frac{|S|}{N}\ \ \text{s.t.}\ \ R(S)\ge0.999\,R(P)$$
+<p>Result: $K^*=10$, $\tau^*=0.003$, giving 5.85 pairs per S1 and $R(S)=0.9955$. On test, $S$ is <code>candidate_pairs.tsv</code>.</p>
+
+<h2><span class="n">6</span>Pair features (101 per pair)</h2>
+<div class="tw"><table>
+<tr><th>feature</th><th>formula</th></tr>
+<tr><td>Indel ratio (RapidFuzz)</td><td>$r(x,y)=1-\frac{d_{\text{indel}}(x,y)}{|x|+|y|}$</td></tr>
+<tr><td>token-set ratio</td><td>$\max$ of $r$ over (shared words) vs (shared + rest of each side)</td></tr>
+<tr><td>Jaro-Winkler</td><td>$J_w=J+\ell p(1-J)$, $J=\frac13\big(\frac{m}{|x|}+\frac{m}{|y|}+\frac{m-t}{m}\big)$</td></tr>
+<tr><td>IDF-weighted word overlap</td><td>$J_{\text{idf}}=\frac{\sum_{w\in A\cap B}\mathrm{idf}(w)}{\sum_{w\in A\cup B}\mathrm{idf}(w)}$</td></tr>
+<tr><td>number Jaccard</td><td>$\frac{|\mathrm{nums}(a)\cap\mathrm{nums}(b)|}{|\mathrm{nums}(a)\cup\mathrm{nums}(b)|}$, plus first-number equality</td></tr>
+<tr><td>name uniqueness</td><td>$u(a)=\big|\{a' : \mathrm{core}(a')=\mathrm{core}(a)\}\big|$ (a shared name is weak evidence)</td></tr>
+<tr><td>listwise gap and rank</td><td>$\mathrm{gap}_a(b)=p_1(a,b)-\max_{b'\ne b}p_1(a,b')$, and the same per record</td></tr>
+<tr><td>mutual best</td><td>$\mathbf 1\big[b=\arg\max_{b'}p_1(a,b')\ \wedge\ a=\arg\max_{a'}p_1(a',b)\big]$</td></tr>
+</table></div>
+
+<h2><span class="n">7</span>Stage 2, out-of-fold predictions, and calibration</h2>
+<p><b>Out-of-fold.</b> Each S1 is given a fold $k(a)=\mathrm{hash}(a,13)\bmod5$. A pair is scored by the model trained
+  without its fold:</p>
+$$\hat p_i=\sigma\big(F^{(-k(a_i))}(x_i)\big)$$
+<p>So every train score is an honest, test-like prediction, and it can safely be a feature for a later stage (this is
+  stacking without leakage). The same folds are used in every stage.</p>
+<p><b>Isotonic calibration.</b> A non-decreasing function $g$ is fitted so that probabilities mean what they say:</p>
+$$g=\arg\min_{g\ \text{non-decreasing}}\sum_i\big(y_i-g(\hat p_i)\big)^2,\qquad p_2=g(\hat p)$$
+<p class="set">Stage 2: 101 features, $\eta=0.05$, $M\le5{,}000$ with early stopping (100 rounds). The final model is refit on all
+  train with $M=1.1\times$ the mean best iteration. Out-of-fold macro $F_{0.5}=0.9888$.</p>
+<p>A per-S1 "has any match" model estimates $q(a)=P(|T(a)|>0)$ from aggregates of $a$'s candidate scores.</p>
+
+<h2><span class="n">8</span>Cross-encoder on uncertain pairs</h2>
+<p>Only for the band $\mathcal B=\{0.02\le p_2\le0.98\}$. Both records are read together by one transformer:</p>
+$$z=\mathrm{Enc}\big(\text{"name: }n_a\text{ | address: }d_a\text{"}\ \Vert\ \text{"name: }n_b\text{ | address: }d_b\text{"}\big),\qquad p_{ce}=\sigma(w^\top z+b_0)$$
+<p>It is trained with binary cross-entropy on $\mathcal B$ plus 5% of confident pairs (lr $3\cdot10^{-5}$, batch 256, 1
+  epoch), 2-fold cross-fitted by S1. The test score is the mean of the two models.</p>
+
+<h2><span class="n">9</span>Graph-consistency features</h2>
+<p>With siblings $\mathrm{Sib}(a,b)=\{b'\ne b: p_2(a,b')\ge0.5\}$ (the other records $a$ already strongly holds):</p>
+$$g_1=\max_{a'\ne a}p_2(a',b),\qquad g_2=\max_{b'\ne b}p_2(a,b'),\qquad g_3=\max_{b'\in\mathrm{Sib}}\cos\big(e(b),e(b')\big),\qquad g_4=\operatorname{mean}_{b'\in\mathrm{Sib}}\cos\big(e(b),e(b')\big)$$
+<p>$g_1$ is high when another S1 wants the record, which is suspicious. $g_3$ and $g_4$ are high when the record looks like
+  its would-be siblings, which is supportive.</p>
+
+<h2><span class="n">10</span>Stage 3: the stack</h2>
+$$x^{(3)}=\big[\,x^{(6)},\ p_2,\ p_{ce},\ g_1..g_7,\ p_{v2}\,\big]\ \xrightarrow{\ \text{XGBoost, same folds}\ }\ \hat p\ \xrightarrow{\ \text{isotonic}\ }\ p$$
+<p>Here $p_{v2}$ is the auxiliary matcher's out-of-fold score (LightGBM on 44 features; its own $F_{0.5}=0.9781$). Counts
+  that depend on candidate density are dropped, because the density differs on test. Out-of-fold macro $F_{0.5}=0.9913$.
+  Share of the model's gain: $p_2$ 69%, $p_{v2}$ 17.5%, $p_1$ 8.4%, $p_{ce}$ 2.7%.</p>
+
+<h2><span class="n">11</span>Decision: one owner and a threshold</h2>
+<p>Each record goes to the S1 that wants it most, and is kept only above the threshold $t$:</p>
+$$a^*(b)=\arg\max_a p(a,b),\qquad M(a)=\{\,b:\ a^*(b)=a,\ p(a,b)\ge t\,\}$$
+<p>On train, $t^*=\arg\max_t \frac1N\sum_a F_{0.5}(a;t)=0.70$. On test the leaderboard preferred $t=0.95$:</p>
+<div class="tw"><table><tr><th>threshold</th><th>public LB</th></tr><tr><td>train-best rule</td><td>0.983</td></tr><tr><td>$t=0.95$</td><td><b>0.984312</b></td></tr><tr><td>$t=0.99$</td><td>0.980</td></tr></table></div>
+
+<h2><span class="n">12</span>Measuring precision on test from two leaderboard scores</h2>
+<p>If file $B$ is file $A$ minus a set $E$ of extra pairs, only the S1s touched by $E$ change. Let each extra pair be
+  correct with probability $q$. Then:</p>
+$$N\,(\mathrm{LB}_A-\mathrm{LB}_B)=\sum_{a\in E}\ \mathbb E_q\big[F_{0.5}(a;A)-F_{0.5}(a;B)\big]$$
+<p>Solving for $q$ gives the precision of $E$ on test, with no labels needed. The 0.95–0.99 band came out at
+  $q\approx0.85$ on test (0.95 on train). Keeping a pair pays off only if $q\gtrsim0.70$, so 0.95 was the right cut.</p>
+
+<h2><span class="n">13</span>The submitted blend (v4 + v5a)</h2>
+$$p=0.7\,p_{\text{v4}}+0.3\,p_{\text{v5a}},\qquad n^*=\big|\{b: p_{\text{v4}}(a^*(b),b)\ge0.95\}\big|,\qquad t=p_{(n^*)}$$
+<p>Here $p_{(n)}$ is the $n$-th largest winning score. Each record still goes to its best S1, and the cut keeps exactly as
+  many pairs as v4 at 0.95 ($t=0.9157$, 5,836,213 pairs). Weights were chosen on train out-of-fold at that pair count:
+  0.99021 → 0.99031. Public LB: <b>0.984403</b>.</p>
+</div>
+</body>
+</html>

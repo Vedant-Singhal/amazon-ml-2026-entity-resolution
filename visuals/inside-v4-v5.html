@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inside v4 and v5</title>
+<style>
+:root {
+  --page:#f5f6f8; --card:#ffffff; --ink:#13161b; --ink-2:#4a515d; --muted:#727a87; --line:#dde0e6;
+  --blue:#2a78d6; --blue-bg:#e7f0fb; --orange:#eb6834; --orange-bg:#fdeee7; --green:#0e8a5c; --green-bg:#e4f4ec;
+  --violet:#6a4fc4; --violet-bg:#eeeafb; --grey-bg:#eceef2; --tech-bg:#f3f5f8; --good:#0a7a1f; --bad:#b3261e;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --page:#0e1014; --card:#171a20; --ink:#f1f3f6; --ink-2:#c0c6cf; --muted:#8d94a0; --line:#2b3039;
+    --blue:#3987e5; --blue-bg:#15263c; --orange:#d95926; --orange-bg:#35200f; --green:#3dbd89; --green-bg:#122a20;
+    --violet:#a390ef; --violet-bg:#231d3a; --grey-bg:#21252d; --tech-bg:#1c2027; --good:#46c46a; --bad:#f07a70;
+  }
+}
+* { box-sizing: border-box; }
+body { margin:0; background:var(--page); color:var(--ink); font:15.5px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; }
+.wrap { max-width: 1000px; margin: 0 auto; padding-inline: 16px; padding-block: 26px 64px; display: grid; gap: 34px; }
+h1 { font-size: 30px; margin: 0; line-height: 1.2; text-wrap: balance; }
+h2 { font-size: 21px; margin: 0; text-wrap: balance; }
+h3 { font-size: 16px; margin: 0; }
+p { margin: 0; }
+.lede { color: var(--ink-2); max-width: 70ch; margin-top: 6px; }
+.sub { color: var(--ink-2); font-size: 14.5px; max-width: 76ch; }
+section { display: grid; gap: 14px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+code, .mono { font: 13px/1.5 ui-monospace, "Cascadia Code", Consolas, monospace; }
+/* toolbar */
+.bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-top: 14px; }
+.toggle { display: inline-flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--line);
+  border-radius: 999px; padding: 6px 14px 6px 8px; cursor: pointer; font: inherit; color: var(--ink); font-size: 14px; }
+.toggle .knob { width: 36px; height: 20px; border-radius: 999px; background: var(--grey-bg); position: relative; transition: background .15s; }
+.toggle .knob::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
+.toggle[aria-pressed="true"] .knob { background: var(--blue-bg); }
+.toggle[aria-pressed="true"] .knob::after { transform: translateX(16px); background: var(--blue); }
+.toggle:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+body.plain .tech { display: none; }
+@media (prefers-reduced-motion: reduce) { .toggle .knob, .toggle .knob::after { transition: none; } }
+/* problem */
+.recs { display: grid; gap: 8px; }
+.rec { display: grid; grid-template-columns: 110px 1fr auto; gap: 10px; align-items: center; background: var(--card);
+  border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; font-size: 14px; }
+.rec .src { font-size: 12px; font-weight: 600; color: var(--muted); }
+.verdict { font-size: 12.5px; font-weight: 650; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.yes { color: var(--good); background: color-mix(in srgb, var(--good) 12%, transparent); }
+.no { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }
+.s1 { border-left: 4px solid var(--ink-2); }
+/* tiles */
+.tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+.tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 2px; align-content: start; }
+.tile .v { font-size: 24px; font-weight: 650; }
+.tile .k { font-size: 12.5px; color: var(--muted); }
+/* funnel */
+.funnel { display: grid; gap: 10px; }
+.frow { display: grid; grid-template-columns: 230px 1fr; gap: 12px; align-items: center; }
+.flab { font-size: 13.5px; color: var(--ink-2); }
+.flab b { display: block; font-size: 16px; color: var(--ink); }
+.fbar { height: 26px; background: var(--grey-bg); border-radius: 6px; position: relative; }
+.fbar i { position: absolute; inset: 0 auto 0 0; background: var(--blue); border-radius: 6px 4px 4px 6px; }
+.fbar span { position: absolute; top: 3px; font-size: 12.5px; font-weight: 600; white-space: nowrap; color: var(--ink); }
+.axisnote { font-size: 12px; color: var(--muted); margin-left: 242px; }
+/* steps */
+.phase { font-size: 12.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 10px 0 -4px; }
+.st { display: grid; grid-template-columns: 46px 1fr; gap: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.no-badge { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; background: var(--bg); color: var(--c); }
+.body { display: grid; gap: 8px; min-width: 0; }
+.top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.file { font: 12.5px ui-monospace, Consolas, monospace; color: var(--muted); }
+.plain-p { color: var(--ink); max-width: 78ch; }
+.ex { font-size: 14px; color: var(--ink-2); background: var(--grey-bg); border-radius: 8px; padding: 6px 10px; }
+.ex b { color: var(--ink); }
+.tech { background: var(--tech-bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; display: grid; gap: 5px; font-size: 13.5px; color: var(--ink-2); }
+.tech .f { font: 13px/1.6 ui-monospace, "Cascadia Code", Consolas, monospace; color: var(--ink); overflow-x: auto; white-space: pre; }
+.tech .lbl { font-size: 11.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 12px; padding: 2px 9px; border-radius: 999px; background: var(--grey-bg); color: var(--ink); }
+.chip.m { background: var(--green-bg); border: 1px solid color-mix(in srgb, var(--green) 45%, transparent); }
+.chip.r { background: var(--blue-bg); font-weight: 650; }
+.search { --c: var(--blue); --bg: var(--blue-bg); }
+.model { --c: var(--green); --bg: var(--green-bg); }
+.decide { --c: var(--orange); --bg: var(--orange-bg); }
+.aux { --c: var(--violet); --bg: var(--violet-bg); }
+/* tables */
+.tw { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--ink-2); font-weight: 600; font-size: 13px; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tag { display: inline-block; font-size: 11.5px; padding: 1px 7px; border-radius: 999px; }
+.tag.pre { background: var(--blue-bg); } .tag.own { background: var(--green-bg); }
+.libs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.lib { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 13.5px; color: var(--ink-2); display: grid; gap: 2px; }
+.lib .h { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.lib b { color: var(--ink); font-size: 14.5px; }
+.lib .lic { font-size: 11.5px; color: var(--muted); }
+.lib .where { font-size: 12px; color: var(--muted); }
+.lib.warn { border-color: color-mix(in srgb, var(--orange) 55%, var(--line)); }
+/* v5 */
+.cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.change { border-left: 4px solid var(--orange); }
+ul { margin: 6px 0 0; padding-left: 20px; }
+li { margin: 3px 0; }
+.stack { display: grid; gap: 8px; margin-top: 8px; }
+.srow { display: grid; grid-template-columns: 160px 1fr; gap: 10px; align-items: center; font-size: 13.5px; }
+.sbar { display: flex; height: 26px; border-radius: 6px; overflow: hidden; gap: 2px; background: var(--card); }
+.sbar i { display: grid; place-items: center; font-style: normal; font-size: 12px; font-weight: 650; color: #fff; }
+.sbar .mt { background: var(--blue); } .sbar .or { background: var(--orange); }
+.blend { display: grid; grid-template-columns: 1fr auto 1fr auto 1.4fr; gap: 10px; align-items: center; }
+.blend .card { text-align: center; display: grid; gap: 2px; }
+.op { font-size: 24px; color: var(--muted); text-align: center; }
+.big { font-size: 24px; font-weight: 650; }
+.gloss { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.gloss div { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 14px; color: var(--ink-2); }
+.gloss b { color: var(--ink); display: block; }
+@media (max-width: 860px) {
+  .tiles { grid-template-columns: repeat(3, 1fr); }
+  .libs, .gloss { grid-template-columns: 1fr 1fr; }
+  .cmp { grid-template-columns: 1fr; }
+  .frow { grid-template-columns: 1fr; gap: 4px; }
+  .axisnote { margin-left: 0; }
+  .blend { grid-template-columns: 1fr; }
+  .rec { grid-template-columns: 1fr; gap: 4px; }
+}
+@media (max-width: 480px) {
+  .tiles { grid-template-columns: 1fr 1fr; }
+  .libs, .gloss { grid-template-columns: 1fr; }
+  .srow { grid-template-columns: 1fr; }
+  .st { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Inside v4 and v5: how our entity matcher works</h1>
+  <p class="lede">Every step explained twice: in plain words with one running example, and in a technical panel with the
+    formula, settings, model and libraries. Numbers are from the actual runs.</p>
+  <div class="bar">
+    <button class="toggle" id="techToggle" type="button" aria-pressed="true"><span class="knob" aria-hidden="true"></span>Technical details</button>
+    <div class="legend" aria-hidden="true">
+      <span><i class="sw" style="background:var(--blue)"></i>finding candidates</span>
+      <span><i class="sw" style="background:var(--green)"></i>trained model</span>
+      <span><i class="sw" style="background:var(--orange)"></i>decision</span>
+      <span><i class="sw" style="background:var(--violet)"></i>helper model</span>
+    </div>
+  </div>
+</header>
+
+<section aria-labelledby="task">
+  <div><h2 id="task">The task in one picture</h2>
+    <p class="sub">Each Source-1 business has copies in Source 2 and Source 3, written differently. Other records look similar but
+      are different businesses. For each S1 we must list its real copies and nothing else.</p></div>
+  <div class="recs">
+    <div class="rec s1"><span class="src">S1 (the business)</span><span>Shree &amp; Sons Pvt Ltd · Plot No: 63, M V P Colony, Visakhapatnam, Andhra Pradesh</span><span></span></div>
+    <div class="rec"><span class="src">S2 record</span><span>Shree &amp; Sóns Pvt Ltd · Plot No: 63, Vishakhapatnam, AP</span><span class="verdict yes">same business</span></div>
+    <div class="rec"><span class="src">S3 record</span><span>श्री एंड संस · Plot 63, Visakhapatnam</span><span class="verdict yes">same business</span></div>
+    <div class="rec"><span class="src">S2 record</span><span>Shree Holdings · Plot 12, Visakhapatnam, AP</span><span class="verdict no">look-alike</span></div>
+  </div>
+  <p class="sub">Illustrative rows. Scoring is macro F0.5: every S1 counts equally, and a wrong match costs about 3× a missed one.</p>
+</section>
+
+<section aria-label="v4 at a glance">
+  <div class="tiles">
+    <div class="tile"><span class="v">12</span><span class="k">steps</span></div>
+    <div class="tile"><span class="v">2</span><span class="k">pretrained models</span></div>
+    <div class="tile"><span class="v">6</span><span class="k">models we trained (+2 helpers)</span></div>
+    <div class="tile"><span class="v">13</span><span class="k">core libraries</span></div>
+    <div class="tile"><span class="v">6.45</span><span class="k">candidates kept per S1</span></div>
+    <div class="tile"><span class="v">0.984403</span><span class="k">final leaderboard score</span></div>
+  </div>
+</section>
+
+<section class="card" aria-labelledby="fun">
+  <h2 id="fun">The funnel: narrowing millions of records down to a few</h2>
+  <p class="sub">Per S1, how many records are still in play after each stage, and how many of the real copies are still kept
+    (measured on the training data, where answers are known).</p>
+  <div class="funnel">
+    <div class="frow"><div class="flab"><b>≈ 3.9 million</b>every record of the same country</div>
+      <div class="fbar" title="about 3.9 million records per S1 before any search"><i style="width:100%"></i><span style="left:10px;color:#fff">nothing compared yet</span></div></div>
+    <div class="frow"><div class="flab"><b>≈ 110</b>after the searches (steps 3–4)</div>
+      <div class="fbar" title="110 candidates per S1; 99.64% of real copies kept"><i style="width:31%"></i><span style="left:calc(31% + 8px)">99.64% of real copies kept</span></div></div>
+    <div class="frow"><div class="flab"><b>6.45</b>after the shortlist (step 5)</div>
+      <div class="fbar" title="6.45 per S1; 99.55% of real copies kept"><i style="width:12.3%"></i><span style="left:calc(12.3% + 8px)">99.55% kept · this is candidate_pairs.tsv</span></div></div>
+    <div class="frow"><div class="flab"><b>3.37</b>final matches (step 11)</div>
+      <div class="fbar" title="3.37 matches per S1"><i style="width:8%"></i><span style="left:calc(8% + 8px)">97.6% of real copies found, very few wrong</span></div></div>
+  </div>
+  <div class="axisnote">Bar length on a log scale, from 1 to 4 million.</div>
+</section>
+
+<section aria-labelledby="flow">
+  <div><h2 id="flow">v4, step by step</h2>
+    <p class="sub">We follow the example S1 above. Training trick used everywhere: the training S1s are split into 5 groups, and
+      each group is scored only by models that never saw it ("out-of-fold"), so every score is as honest as on test.</p></div>
+
+  <div class="phase">Before the main pipeline</div>
+  <div class="st aux"><div class="no-badge">0</div><div class="body">
+    <div class="top"><h3>A second-opinion matcher</h3><span class="file">src/v2/</span></div>
+    <p class="plain-p">A simpler matcher, built independently, gives every pair its own probability. We don't submit it: its score
+      becomes one input of the final model, like asking a second expert.</p>
+    <div class="tech"><span class="lbl">Technical</span>
+      <div>e5-small search (25 per S1, 5 S1 per record) + IDF shared keys → 44 pair features → LightGBM, 5-fold GroupKFold by S1 →
+        isotonic calibration → out-of-fold <code>p_v2</code>. Own macro F0.5 0.9781; 17.5% of stage 3's gain.</div>
+      <div class="chips"><span class="chip m">LightGBM model</span><span class="chip">lightgbm</span><span class="chip">sentence-transformers</span><span class="chip">anyascii (transliteration)</span></div></div>
+  </div></div>
+
+  <div class="phase">Phase 1 · Find candidates</div>
+  <div class="st search"><div class="no-badge">1</div><div class="body">
+    <div class="top"><h3>Clean the text</h3><span class="file">prepare.py · text.py · lexicon.py</span></div>
+    <p class="plain-p">Copies are written differently, so everything is put into one standard form first. The replacement rules are
+      learned from the training answers, not typed by hand.</p>
+    <p class="ex">Example: <b>Sóns → sons</b>, <b>AP → andhra pradesh</b>, <b>Pvt → private</b>; core name <b>shree sons</b> (generic words
+      removed); house number <b>63</b>.</p>
+    <div class="tech"><span class="lbl">Technical</span>
+      <div class="f">keep u → v  if  n(u→v) ≥ 20  and  n(u→v) / n(u) ≥ 0.5     (u in the copy only, v in the S1 only, over true pairs)
+generic(w, country) ⇔ share of that country's names containing w ≥ 1%</div>
+      <div>≈ 2,000 name and 700 address mappings; generic words from each split's own records (US 40, India 64, France 77). Also
+        mojibake repair, alias split, OCR repair, consonant skeleton, metaphone, typed numbers, uniqueness counts.</div>
+      <div class="chips"><span class="chip">polars</span><span class="chip">anyascii</span><span class="chip">jellyfish</span></div></div>
+  </div></div>
+
+  <div class="st search"><div class="no-badge">2</div><div class="body">
+    <div class="top"><h3>Turn text into numbers</h3><span class="file">embed.py</span></div>
+    <p class="plain-p">Two language models turn each record into a list of numbers (a vector). Records that mean the same thing get
+      vectors pointing the same way, even across spelling or script.</p>
+    <p class="ex">Example: the Hindi-script copy and the English S1 end up with close vectors.</p>
+    <div class="tech"><span class="lbl">Technical</span>
+      <div class="f">e(x) = f(x) / ‖f(x)‖        cos(a, b) = e(a) · e(b)</div>
+      <div>Input "name | address", fp16, max 64 tokens. e5-large is stronger overall and on native script, e5-small on records
+        without an address, so both are used.</div>
+      <div class="chips"><span class="chip m">multilingual-e5-small (118M, MIT)</span><span class="chip m">multilingual-e5-large (560M, MIT)</span><span class="chip">sentence-transformers</span><span class="chip">torch</span></div></div>
+  </div></div>
+
+  <div class="st search"><div class="no-badge">3</div><div class="body">
+    <div class="top"><h3>Search for candidates, within each country</h3><span class="file">block.py · sketch.py</span></div>
+    <p class="plain-p">Comparing an S1 with millions of records is impossible, so several fast searches each propose likely
+      candidates. The goal here is to miss nothing: look-alikes are rejected later.</p>
+    <p class="ex">Example: both copies <b>and</b> the look-alike "Shree Holdings" are found.</p>
+    <div class="tech"><span class="lbl">Technical</span>
+      <div class="f">forward:  top-25 records by cos(a, ·)        reverse:  each record's top-5 S1
+sketch:   s_j(x) = Σ_{g: h(g)=j} σ(g)·tfidf_g(x),  j = 1..256    (E[s(a)·s(b)] = tfidf cosine)
+keys:     sp(a, b) = Σ_{shared rare keys k} log(N / df(k)) → top 20;  6 exact keys, capped at 10 S1 / 50 records</div>
+      <div>Recall alone: e5 forward 0.961 / 0.963, reverse 0.975 / 0.980, address sketch 0.809, name sketch 0.626. Union: 0.9908 at
+        92 pairs per S1. Exact GPU search at this size; FAISS IVF for larger data.</div>
+      <div class="chips"><span class="chip">torch (GPU nearest neighbours)</span><span class="chip">scikit-learn</span><span class="chip">scipy</span><span class="chip">faiss</span><span class="chip r">recall 0.9908</span></div></div>
+  </div></div>
+
+  <div class="st model"><div class="no-badge">4</div><div class="body">
+    <div class="top"><h3>A search model trained on our data</h3><span class="file">retriever.py</span></div>
+    <p class="plain-p">We took e5-small and trained it on the training answers: "these two texts are the same business". It learns
+      what "same" means in this data and finds copies the other searches missed.</p>
+    <div class="tech"><span class="lbl">Technical</span>
+      <div class="f">L = −(1/B) Σ_i log [ exp(20·cos(q_i, d_i)) / Σ_j exp(20·cos(q_i, d_j)) ]     B = 256, lr 2e-5</div>
+      <div>InfoNCE with in-batch negatives; romanized copies of native script as extra positives; cross-fitted in 2 halves of S1 on
+        train. Adds top 10 per S1 and top 3 S1 per record. Removes 61% of the true pairs the other routes missed.</div>
+      <div class="chips"><span class="chip m">fine-tuned e5-small ×3</span><span class="chip">sentence-transformers</span><span class="chip">torch</span><span class="chip r">recall 0.9964 at 110 per S1</span></div></div>
+  </div></div>
+
+  <div class="st model"><div class="no-badge">5</div><div class="body">
+    <div class="top"><h3>Shortlist the best candidates</h3><span class="file">stage1.py</span></div>
+    <p class="plain-p">A fast model scores all ~110 candidates with cheap clues and keeps only the best few per S1, so the careful
+      model later has less to check.</p>
+    <p class="ex">Example: the two copies and the look-alike are kept; about 100 unrelated records are dropped.</p>
+    <div class="tech"><span class="lbl">Technical</span>
+      <div class="f">p1 = σ( Σ_m η·f_m(x) )                       gradient-boosted trees, log-loss
+(K, τ) = argmin |S| / N   s.t.  recall(S) ≥ 0.999 · recall(pool)   →   K = 10, τ = 0.003</div>
+      <div>XGBoost (GPU), 51 cheap features, η = 0.1, ≤ 1,500 trees, depth 9, subsample 0.8, 5-fold out-of-fold. Top features:
+        e5-large reverse rank 52%, e5-large cosine rank 19.5%, same house number 8.8%, retriever rank 4.3%.</div>
+      <div class="chips"><span class="chip m">XGBoost, 5 × ~1,500 trees</span><span class="chip">xgboost</span><span class="chip">rapidfuzz</span><span class="chip r">recall 0.9955 at 5.85 per S1</span></div></div>
+  </div></div>
+
+  <div class="phase">Phase 2 · Decide carefully</div>
+  <div class="st model"><div class="no-badge">6</div><div class="body">
+    <div class="top"><h3>Measure every candidate in 101 ways</h3><span class="file">features.py</span></div>
+    <p class="plain-p">For each shortlisted pair: how similar are the names, the addresses, the house numbers? How rare are the shared
+      words? Is this the S1's best candidate, and by how much?</p>
+    <p class="ex">Example: copy — name ≈ 100%, house number 63 = 63, rank 1. Look-alike — only "shree" shared, 12 ≠ 63, far behind.</p>
+    <div class="tech"><span class="lbl">Technical</span>
+      <div class="f">ratio = 1 − d_indel(x, y) / (|x| + |y|)          J_idf = Σ_{A∩B} idf(w) / Σ_{A∪B} idf(w)
+gap_a(b) = p1(a, b) − max_{b'≠b} p1(a, b')          mutual best = [b best for a] ∧ [a best for b]</div>
+      <div>Name: ratio, token-sort/set, partial, Jaro-Winkler on full/core/compact/OCR names, aliases, initials, metaphone, skeleton,
+        typos. Address: similarities on full/core address, abbreviation coverage, typed-number relation. Plus retrieval ranks,
+        uniqueness counts, listwise ranks and gaps. Country is not a feature.</div>
+      <div class="chips"><span class="chip">rapidfuzz</span><span class="chip">jellyfish</span><span class="chip">polars</span></div></div>
+  </div></div>
+
+  <div class="st model"><div class="no-badge">7</div><div class="body">
+    <div class="top"><h3>The main matcher</h3><span class="file">train.py · learner.py · decide.py</span></div>
+    <p class="plain-p">A model learns from 7.6 million labelled training pairs how to combine the 101 measurements into one
+      probability, then that probability is adjusted so that "0.9" really means right 9 times out of 10.</p>
+    <p class="ex">Example: copy → p2 ≈ 0.99; look-alike → p2 ≈ 0.02.</p>
+    <div class="tech"><span class="lbl">Technical</span>
+      <div class="f">fold(a) = hash(a, 13) mod 5        p̂_i = σ(F^(−fold(a_i))(x_i))        (out-of-fold)
+g = argmin_{g non-decreasing} Σ (y_i − g(p̂_i))²,   p2 = g(p̂)                         (isotonic calibration)</div>
+      <div>XGBoost, η = 0.05, ≤ 5,000 trees with early stopping (~3,000–3,500 used per fold; final 3,496), depth 9. A per-S1 "has any
+        match" model runs alongside.</div>
+      <div class="chips"><span class="chip m">XGBoost</span><span class="chip m">has-any-match XGBoost</span><span class="chip">xgboost</span><span class="chip">scikit-learn</span><span class="chip r">score 0.9888</span></div></div>
+  </div></div>
+
+  <div class="st model"><div class="no-badge">8</div><div class="body">
+    <div class="top"><h3>A careful reader for unsure cases</h3><span class="file">crossenc.py</span></div>
+    <p class="plain-p">For pairs where the matcher is unsure, a language model reads both records together, word by word, and gives
+      its own opinion. It catches things the measurements miss, like one word turning a business into a different one.</p>
+    <div class="tech"><span class="lbl">Technical</span>
+      <div class="f">p_ce = σ( wᵀ · Enc("name: … | address: …"_a ‖ "name: … | address: …"_b) + b₀ )     only if 0.02 ≤ p2 ≤ 0.98</div>
+      <div>Base multilingual-e5-small + 1-logit head, max 96 tokens, lr 3e-5, batch 256, 1 epoch, binary cross-entropy on the band +
+        5% of confident pairs; 2-fold cross-fitted by S1; test = mean of both.</div>
+      <div class="chips"><span class="chip m">cross-encoder ×2</span><span class="chip">transformers</span><span class="chip">torch</span></div></div>
+  </div></div>
+
+  <div class="st model"><div class="no-badge">9</div><div class="body">
+    <div class="top"><h3>Does it fit the group?</h3><span class="file">graph.py</span></div>
+    <p class="plain-p">A real copy looks like the other copies the S1 already has. A record that another S1 wants even more is
+      suspicious.</p>
+    <p class="ex">Example: the Hindi copy resembles the English copy already held, which supports it.</p>
+    <div class="tech"><span class="lbl">Technical</span>
+      <div class="f">g1 = max_{a'≠a} p2(a', b)        g2 = max_{b'≠b} p2(a, b')
+g3 = max_{b' ∈ Sib(a)} cos(b, b')    Sib(a) = { b' : p2(a, b') ≥ 0.5 }   (also mean, other-source-only, name similarity)</div>
+      <div class="chips"><span class="chip">polars</span><span class="chip">numpy</span></div></div>
+  </div></div>
+
+  <div class="st model"><div class="no-badge">10</div><div class="body">
+    <div class="top"><h3>The final model combines every opinion</h3><span class="file">stage3.py</span></div>
+    <p class="plain-p">One more model takes the measurements plus every earlier opinion (main matcher, careful reader, group check,
+      second-opinion matcher) and gives the final probability.</p>
+    <div class="tech"><span class="lbl">Technical</span>
+      <div class="f">x = [ features (minus 8 density-dependent counts), p2, p_ce, g1..g7, p_v2 ]  →  XGBoost  →  isotonic  →  p</div>
+      <div>105 inputs, same folds (leak-free stacking), ~800 trees per fold, final 886. Gain share: p2 69%, p_v2 17.5%, p1 8.4%, p_ce
+        2.7%, graph ≈ 0.7%.</div>
+      <div class="chips"><span class="chip m">XGBoost + has-any-match</span><span class="chip">xgboost</span><span class="chip">scikit-learn</span><span class="chip r">score 0.9913</span></div></div>
+  </div></div>
+
+  <div class="st decide"><div class="no-badge">11</div><div class="body">
+    <div class="top"><h3>The final decision</h3></div>
+    <p class="plain-p">Each record can belong to only one S1: the one that wants it most. Then only confident pairs are kept. We set
+      the bar high (0.95) because the test data has twice as many look-alikes as the training data.</p>
+    <p class="ex">Example: both copies kept (p ≈ 0.999); "Shree Holdings" rejected.</p>
+    <div class="tech"><span class="lbl">Technical</span>
+      <div class="f">a*(b) = argmax_a p(a, b)        M(a) = { b : a*(b) = a,  p(a, b) ≥ 0.95 }
+F0.5(a) = 1.25·TP / (1.25·TP + 0.25·FN + FP),   score = mean over all S1</div>
+      <div>Best threshold on train: 0.70 (leaderboard 0.983). At 0.95: 0.984312. At 0.99: 0.980. Comparing leaderboard scores of
+        cuts showed the 0.95–0.99 band is ≈ 85% right on test against ≈ 95% on train.</div>
+      <div class="chips"><span class="chip r">v4: 0.984312</span></div></div>
+  </div></div>
+</section>
+
+<section class="card" aria-labelledby="mdl">
+  <h2 id="mdl">Every model in v4</h2>
+  <div class="tw"><table>
+    <thead><tr><th>model</th><th>what kind</th><th>size</th><th>learns from</th><th>gives</th><th>step</th></tr></thead>
+    <tbody>
+      <tr><td>multilingual-e5-small <span class="tag pre">pretrained · MIT</span></td><td>language model</td><td class="num">118M parameters</td><td>(downloaded)</td><td>vectors; base of two models below</td><td>2</td></tr>
+      <tr><td>multilingual-e5-large <span class="tag pre">pretrained · MIT</span></td><td>language model</td><td class="num">560M parameters</td><td>(downloaded)</td><td>vectors</td><td>2</td></tr>
+      <tr><td>second-opinion matcher <span class="tag own">trained</span></td><td>LightGBM</td><td class="num">44 features</td><td>train answers</td><td>p_v2</td><td>0</td></tr>
+      <tr><td>search model (retriever) <span class="tag own">trained</span></td><td>fine-tuned e5-small</td><td class="num">3 copies</td><td>true train pairs</td><td>extra candidates</td><td>4</td></tr>
+      <tr><td>shortlist model <span class="tag own">trained</span></td><td>XGBoost</td><td class="num">51 features · 5 × ~1,500 trees</td><td>all candidates</td><td>p1</td><td>5</td></tr>
+      <tr><td>main matcher <span class="tag own">trained</span></td><td>XGBoost + calibration</td><td class="num">101 features · 5 × ~3,000–3,500 trees</td><td>shortlist</td><td>p2</td><td>7</td></tr>
+      <tr><td>careful reader (cross-encoder) <span class="tag own">trained</span></td><td>fine-tuned e5-small + head</td><td class="num">2 copies</td><td>unsure pairs</td><td>p_ce</td><td>8</td></tr>
+      <tr><td>final model <span class="tag own">trained</span></td><td>XGBoost + calibration</td><td class="num">105 inputs · 5 × ~800 trees</td><td>shortlist + all opinions</td><td>final p</td><td>10</td></tr>
+      <tr><td>helpers <span class="tag own">trained</span></td><td>"has any match" XGBoost ×2</td><td class="num">per S1</td><td>per-S1 summaries</td><td>chance an S1 has no copy</td><td>7, 10</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section aria-labelledby="lib">
+  <div><h2 id="lib">Libraries and what each one does</h2><p class="sub">13 core libraries run v4 and v5. One more, LightGBM, belongs only to the
+    second-opinion matcher (step 0).</p></div>
+  <div class="libs">
+    <div class="lib"><div class="h"><b>PyTorch</b><span class="lic">BSD</span></div>runs the language models on the GPU; fast nearest-neighbour search<span class="where">steps 2, 3, 4, 8</span></div>
+    <div class="lib"><div class="h"><b>sentence-transformers</b><span class="lic">Apache-2.0</span></div>loads e5, makes vectors, trains the search model<span class="where">steps 0, 2, 4</span></div>
+    <div class="lib"><div class="h"><b>transformers</b><span class="lic">Apache-2.0</span></div>the careful reader (cross-encoder)<span class="where">step 8</span></div>
+    <div class="lib"><div class="h"><b>XGBoost</b><span class="lic">Apache-2.0</span></div>the shortlist, main and final models<span class="where">steps 5, 7, 10</span></div>
+    <div class="lib"><div class="h"><b>polars</b><span class="lic">MIT</span></div>every table: records, candidates, features<span class="where">all steps</span></div>
+    <div class="lib"><div class="h"><b>pyarrow</b><span class="lic">Apache-2.0</span></div>saves and loads each step's results (parquet)<span class="where">all steps</span></div>
+    <div class="lib"><div class="h"><b>numpy</b><span class="lic">BSD</span></div>arrays and vectors<span class="where">all steps</span></div>
+    <div class="lib"><div class="h"><b>scikit-learn</b><span class="lic">BSD</span></div>probability calibration; hashing of 3-letter pieces<span class="where">steps 3, 7, 10</span></div>
+    <div class="lib"><div class="h"><b>scipy</b><span class="lic">BSD</span></div>sparse matrices for the 3-letter sketches<span class="where">step 3</span></div>
+    <div class="lib"><div class="h"><b>RapidFuzz</b><span class="lic">MIT</span></div>fast name and address similarity scores<span class="where">steps 5, 6</span></div>
+    <div class="lib"><div class="h"><b>jellyfish</b><span class="lic">MIT</span></div>"sounds-like" codes (metaphone)<span class="where">steps 1, 6</span></div>
+    <div class="lib"><div class="h"><b>anyascii</b><span class="lic">ISC</span></div>turns non-Latin letters into Latin<span class="where">steps 0, 1</span></div>
+    <div class="lib"><div class="h"><b>FAISS</b><span class="lic">MIT</span></div>approximate search for data too big for exact search<span class="where">step 3 (not needed at this size)</span></div>
+    <div class="lib"><div class="h"><b>LightGBM</b><span class="lic">MIT</span></div>the second-opinion matcher's model<span class="where">step 0 only</span></div>
+    
+  </div>
+</section>
+
+<section aria-labelledby="v5">
+  <div><h2 id="v5">v5: what is extra</h2><p class="sub">Same code as v4 with three switches turned on. It reuses v4's candidates, so both
+    models judge exactly the same shortlist.</p></div>
+  <div class="cmp">
+    <div class="card"><h3>Same as v4</h3>
+      <ul><li>text cleaning and learned rules</li><li>vectors and every search (candidates copied from v4)</li><li>101 measurements, main
+        matcher, careful reader, group check, final model</li><li>decision rule</li></ul></div>
+    <div class="card change"><h3>Changed in v5</h3>
+      <ul><li><b>1.</b> practise on test-like data: 19% of training S1s hidden</li><li><b>2.</b> learn each country's abbreviations from the records</li>
+        <li><b>3.</b> shortlist model allowed 3,000 trees instead of 1,500</li></ul></div>
+  </div>
+
+  <div class="card change">
+    <h3>1 · Practise on test-like data</h3>
+    <p class="plain-p" style="margin-top:6px">An "orphan" is a record whose S1 is not in the data: a look-alike with no true owner. Test has about
+      twice as many as train. v5 hides 19% of the training S1s, so their copies become orphans. The model then practises saying
+      "no" as often as test requires.</p>
+    <div class="key" aria-hidden="true" style="display:flex;gap:16px;font-size:12.5px;color:var(--ink-2);margin-top:8px"><span style="display:inline-flex;align-items:center;gap:6px"><i class="sw" style="background:var(--blue)"></i>records with an S1</span><span style="display:inline-flex;align-items:center;gap:6px"><i class="sw" style="background:var(--orange)"></i>orphans</span></div>
+    <div class="stack">
+      <div class="srow"><span>training data (v4)</span><div class="sbar" title="74% with an S1, 26% orphans"><i class="mt" style="width:74%">74%</i><i class="or" style="width:26%">26%</i></div></div>
+      <div class="srow"><span>training data (v5)</span><div class="sbar" title="about 60% with an S1, 40% orphans"><i class="mt" style="width:60%">≈60%</i><i class="or" style="width:40%">≈40%</i></div></div>
+      <div class="srow"><span>test data (estimated)</span><div class="sbar" title="about 58% with an S1, 42% orphans"><i class="mt" style="width:58%">≈58%</i><i class="or" style="width:42%">≈42%</i></div></div>
+    </div>
+    <div class="tech" style="margin-top:10px"><span class="lbl">Technical</span>
+      <div>S1 dropped by <code>hash(id, seed+99)</code> after the pool is built: 2,206,821 → 1,786,233 S1; pool 243.8M → 197.3M pairs;
+        reverse-route ranks re-ranked among the remaining S1; ground truth read through the kept S1 only. Stage 1 → stage 3 are then
+        learned under this density (<code>s1drop.py</code>).</div></div>
+  </div>
+
+  <div class="cmp">
+    <div class="card change"><h3>2 · Learn abbreviations from the records</h3>
+      <p class="plain-p" style="margin-top:6px">No answers needed. Records that share a house number and a rare word are almost certainly
+        the same place; where one writes a short word and the other a long one, the short one is probably an abbreviation. This
+        gives France a vocabulary even though France has no training answers.</p>
+      <div class="chips" style="margin-top:8px"><span class="chip">r → rue</span><span class="chip">bd → boulevard</span><span class="chip">ets → etablissements</span><span class="chip">st → saint</span></div>
+      <div class="tech" style="margin-top:10px"><span class="lbl">Technical</span>
+        <div>Candidate short→long if same first letter and the short word's letters appear in order in the long one; kept if
+          ≥ 30 occurrences and ≥ 50% consistency; per country; applied before the lexicon (<code>mining.py</code>).</div></div></div>
+    <div class="card change"><h3>3 · A bigger shortlist model</h3>
+      <p class="plain-p" style="margin-top:6px">v4's shortlist model hit its limit of 1,500 trees in every group (1,446–1,499), so it was
+        still improving. v5 allows 3,000.</p>
+      <div class="chips" style="margin-top:8px"><span class="chip r">v5 alone: train 0.9910 (harder data) · leaderboard 0.98376</span></div></div>
+  </div>
+</section>
+
+<section aria-labelledby="bl">
+  <div><h2 id="bl">The submission: blending v4 and v5</h2><p class="sub">The two models make different mistakes, so we average them,
+    trusting v4 more. We keep exactly as many pairs as v4 alone did at 0.95, so the blend only swaps v4's weakest pairs for better
+    ones.</p></div>
+  <div class="blend">
+    <div class="card"><div class="big">0.7 × v4</div><div class="sub">alone: 0.984312</div></div>
+    <div class="op">+</div>
+    <div class="card"><div class="big">0.3 × v5</div><div class="sub">alone: 0.98376</div></div>
+    <div class="op">→</div>
+    <div class="card change" style="border-left-width:4px"><div class="big">0.984403</div><div class="sub">+0.00009 over v4, as the training
+      check predicted (+0.0001)</div></div>
+  </div>
+  <div class="tech"><span class="lbl">Technical</span>
+    <div class="f">p = 0.7·p_v4 + 0.3·p_v5        a*(b) = argmax_a p(a, b)        t = n*-th largest winning p,  n* = |v4 pairs at p ≥ 0.95|</div>
+    <div>t = 0.9157, 5,836,213 pairs. Weights chosen on the 1,782,911 training S1s v5 kept, at equal pair count: 0.7/0.3 best of 14
+      weightings and 3 voting rules (0.99031 vs v4 0.99021). <code>src/run_final.py</code> reproduces the uploaded file byte for byte.</div></div>
+</section>
+
+<section aria-labelledby="gl">
+  <h2 id="gl">Words used on this page</h2>
+  <div class="gloss">
+    <div><b>Recall</b>share of real copies that are still kept.</div>
+    <div><b>Precision</b>share of kept pairs that are real copies.</div>
+    <div><b>F0.5</b>a score that weighs precision more than recall; a wrong match costs about 3× a missed one.</div>
+    <div><b>Out-of-fold</b>each training S1 is scored by a model that never saw it, so scores behave like on test.</div>
+    <div><b>Calibration</b>adjusting scores so that "0.9" means right about 90% of the time.</div>
+    <div><b>Orphan</b>a record whose true S1 is not in the data: a look-alike with no owner.</div>
+    <div><b>Gradient-boosted trees</b>many small decision trees, each fixing the errors of the ones before.</div>
+    <div><b>Embedding (vector)</b>a list of numbers that captures a text's meaning; similar texts get similar vectors.</div>
+  </div>
+</section>
+
+</div>
+<script>
+(function () {
+  var btn = document.getElementById("techToggle");
+  btn.addEventListener("click", function () {
+    var on = btn.getAttribute("aria-pressed") !== "true";
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    document.body.classList.toggle("plain", !on);
+  });
+})();
+</script>
+</body>
+</html>

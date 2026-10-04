@@ -1,0 +1,17 @@
+version,variant,decision_rule,train_oof_macro_f05,public_lb,notes
+v0,baseline,global threshold (pair-level F0.5),,0.593,name-only TF-IDF search; 9 features; XGBoost; no one-owner rule
+teammate_v1,char3gram_mlp,global threshold 0.70,0.955,0.904,own hold-out on a 30% sample (not out-of-fold)
+teammate_v2,later version,,,0.964,code not archived
+v2,learned lexicon + dense search,one owner + threshold 0.65,0.9781,0.9700,US 0.9795 / India 0.9760
+v3,13 routes + learned shortlist,train-tuned rule (expected F0.5 + has-any-match),0.9881,0.97493,US 0.9881 / India 0.9881
+v3,fold-consistent scoring,train-tuned rule,0.9881,0.974654,no gain: the gap is data shift
+v3,threshold probe,threshold 0.30,,0.958,
+v3,threshold probe,threshold 0.95,,0.978,test is precision-limited
+v4,Model A,train-tuned rule (expected F0.5),0.9913,0.983,US 0.9908 / India 0.9921
+v4,Model A,threshold 0.95,0.9913,0.984312,best single model
+v4,Model A,threshold 0.99,0.9913,0.980,
+v4,band probe,threshold 0.95 minus number-conflict band pairs,,0.984,dropped pairs ~0.72 precise (break-even)
+v4,band probe,threshold 0.95 minus no-address band pairs,,0.983,dropped pairs ~0.90 precise
+v5a,Model B,threshold 0.95,0.9910,0.98376,train OOF on a test-like (harder) training set; US 0.9905 / India 0.9917
+v5a,Model B,threshold 0.93 or 0.70,0.9910,0.983,approximate
+final,0.7 v4 + 0.3 v5a,one owner + cut at v4's pair count (t=0.9157),0.99031,0.984403,train score on the 1.78M S1 kept by v5a (v4 alone 0.99021 on the same subset)

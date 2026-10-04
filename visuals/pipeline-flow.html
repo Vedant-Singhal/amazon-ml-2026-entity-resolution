@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>v4 Pipeline Flow</title>
+<style>
+:root {
+  --page: #f6f7f9; --card: #ffffff; --ink: #14171c; --ink-2: #4f5663; --muted: #7a818e; --line: #d9dde4;
+  --search: #2a78d6; --search-bg: #e8f1fc; --model: #0f8a5f; --model-bg: #e6f5ee; --decide: #c2571a; --decide-bg: #fcefe6;
+  --aux: #6b4fc7; --aux-bg: #efebfb; --file: #14171c; --file-bg: #eceef2;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --page: #0f1115; --card: #181b21; --ink: #f2f4f7; --ink-2: #c1c7d0; --muted: #8f96a3; --line: #2c313a;
+    --search: #5b9ded; --search-bg: #16273d; --model: #3fbf8c; --model-bg: #132b22; --decide: #e8864d; --decide-bg: #33200f;
+    --aux: #a592f0; --aux-bg: #231d3b; --file: #f2f4f7; --file-bg: #22262e;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+.wrap { max-width: 980px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 48px; }
+h1 { font-size: 26px; margin: 0 0 4px; }
+.lede { color: var(--ink-2); margin: 0 0 18px; max-width: 70ch; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--ink-2); margin-bottom: 20px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; }
+.grid { display: grid; grid-template-columns: 1fr 220px; gap: 0 22px; align-items: start; }
+.flow { display: grid; gap: 0; }
+.step { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 10px; padding: 12px 14px; }
+.step .hd { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.num { font-weight: 700; color: var(--c); font-variant-numeric: tabular-nums; }
+.name { font-weight: 650; }
+.code { font: 12.5px ui-monospace, "Cascadia Code", Consolas, monospace; color: var(--muted); }
+.what { margin: 4px 0 0; color: var(--ink-2); font-size: 14px; }
+.res { display: inline-block; margin-top: 6px; font-size: 12.5px; font-weight: 600; background: var(--bg); color: var(--c); padding: 2px 8px; border-radius: 999px; }
+.search { --c: var(--search); --bg: var(--search-bg); }
+.model { --c: var(--model); --bg: var(--model-bg); }
+.decide { --c: var(--decide); --bg: var(--decide-bg); }
+.aux { --c: var(--aux); --bg: var(--aux-bg); }
+.file { --c: var(--file); --bg: var(--file-bg); background: var(--file-bg); border-left-width: 1px; text-align: center; font-weight: 600; }
+.arrow { height: 22px; display: grid; place-items: center; color: var(--muted); font-size: 16px; line-height: 1; }
+.split { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
+.split div, .pair div { background: var(--bg); border-radius: 8px; padding: 6px 8px; font-size: 13px; color: var(--ink); }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pair .step { height: 100%; }
+.side { position: sticky; top: 16px; display: grid; gap: 10px; }
+.side .step { font-size: 13.5px; }
+.note { margin-top: 22px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; color: var(--ink-2); font-size: 14px; }
+.out { color: var(--ink); font-weight: 600; }
+@media (max-width: 760px) {
+  .grid { grid-template-columns: 1fr; }
+  .side { position: static; margin-top: 18px; }
+  .split { grid-template-columns: 1fr 1fr; }
+  .pair { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>v4 pipeline, first step to last</h1>
+  <p class="lede">How one S1 business gets its matches: find about 110 candidates, shortlist about 6, decide which
+    are real. Numbers are measured on the training data unless marked LB (public leaderboard).</p>
+  <div class="legend" aria-hidden="true">
+    <span><i class="sw" style="background: var(--search)"></i>search / candidates</span>
+    <span><i class="sw" style="background: var(--model)"></i>trained model</span>
+    <span><i class="sw" style="background: var(--decide)"></i>decision</span>
+    <span><i class="sw" style="background: var(--aux)"></i>auxiliary matcher</span>
+  </div>
+
+  <div class="grid">
+    <div class="flow">
+      <div class="step file">Raw data: train and test S1 / S2 / S3 records, train answers (ground truth)</div>
+      <div class="arrow">▼</div>
+      <div class="step search"><div class="hd"><span class="num">1</span><span class="name">Clean the text</span><span class="code">prepare.py</span></div>
+        <p class="what">Fix broken characters, split aliases, apply the lexicon learned from training pairs
+          (<i>st→street</i>, <i>AP→andhra pradesh</i>), core name without generic words, house number, match keys.</p></div>
+      <div class="arrow">▼</div>
+      <div class="step search"><div class="hd"><span class="num">2</span><span class="name">Embed</span><span class="code">embed.py</span></div>
+        <p class="what">multilingual-e5-small and e5-large turn each "name | address" into a vector.</p></div>
+      <div class="arrow">▼</div>
+      <div class="step search"><div class="hd"><span class="num">3</span><span class="name">Search within each country</span><span class="code">block.py</span></div>
+        <div class="split"><div>Nearest vectors, both models (25 per S1)</div><div>Reverse: each record's 5 nearest S1</div>
+          <div>Character 3-gram sketches (typos)</div><div>Rare shared words + exact keys</div></div>
+        <span class="res">recall 0.9908</span></div>
+      <div class="arrow">▼</div>
+      <div class="step search"><div class="hd"><span class="num">4</span><span class="name">Fine-tuned retriever</span><span class="code">retriever.py</span></div>
+        <p class="what">e5-small trained on our own pairs adds its top 10 per S1.</p>
+        <span class="res">pool ≈ 110 per S1 · recall 0.9964</span></div>
+      <div class="arrow">▼</div>
+      <div class="step model"><div class="hd"><span class="num">5</span><span class="name">Stage 1 shortlist</span><span class="code">stage1.py</span></div>
+        <p class="what">Fast XGBoost on 51 cheap features; each S1 keeps its best candidates (rank ≤ 10, p1 ≥ 0.003).
+          <span class="out">This is candidate_pairs.tsv.</span></p>
+        <span class="res">5.85 per S1 · recall 0.9955</span></div>
+      <div class="arrow">▼</div>
+      <div class="step model"><div class="hd"><span class="num">6</span><span class="name">101 pair features</span><span class="code">features.py</span></div>
+        <p class="what">Name and address similarities, house-number relation, how rare the shared words are, rank and gap
+          against the S1's other candidates.</p></div>
+      <div class="arrow">▼</div>
+      <div class="step model"><div class="hd"><span class="num">7</span><span class="name">Stage 2</span><span class="code">train.py</span></div>
+        <p class="what">XGBoost on the 101 features, calibrated → p2.</p><span class="res">0.9888</span></div>
+      <div class="arrow">▼</div>
+      <div class="pair">
+        <div class="step model"><div class="hd"><span class="num">8</span><span class="name">Cross-encoder</span><span class="code">crossenc.py</span></div>
+          <p class="what">Only unsure pairs (0.02 ≤ p2 ≤ 0.98): a transformer reads both records together → p_ce.</p></div>
+        <div class="step model"><div class="hd"><span class="num">9</span><span class="name">Graph checks</span><span class="code">graph.py</span></div>
+          <p class="what">Does the record fit the S1's group? Does another S1 want it more?</p></div>
+      </div>
+      <div class="arrow">▼</div>
+      <div class="step model"><div class="hd"><span class="num">10</span><span class="name">Stage 3, final model</span><span class="code">stage3.py</span></div>
+        <p class="what">XGBoost on the 101 features + p2 + p_ce + graph checks + the auxiliary matcher's p_v2 → final p.</p>
+        <span class="res">0.9913</span></div>
+      <div class="arrow">▼</div>
+      <div class="step decide"><div class="hd"><span class="num">11</span><span class="name">Decision</span></div>
+        <p class="what">Each S2/S3 record goes to its best S1 only; keep pairs with p ≥ 0.95 (stricter than the train
+          optimum 0.70, because test has twice as many look-alike records).</p></div>
+      <div class="arrow">▼</div>
+      <div class="step file">matching_results.tsv · v4 alone LB 0.984312 · blended 0.7 v4 + 0.3 v5a → LB 0.984403</div>
+    </div>
+
+    <div class="side">
+      <div class="step aux"><div class="hd"><span class="num">0</span><span class="name">Auxiliary matcher (v2)</span></div>
+        <p class="what">Runs separately on the raw data: one embedder, 44 features, LightGBM → p_v2 (0.9781).</p>
+        <span class="res">feeds step 10</span></div>
+      <div class="step model"><div class="hd"><span class="name">Out-of-fold</span></div>
+        <p class="what">Train S1s are split into 5 groups by id. Each group is scored by a model that never saw it, so
+          p1, p2, p_ce and p_v2 are honest inputs for the next stage.</p></div>
+      <div class="step search"><div class="hd"><span class="name">Only provided data</span></div>
+        <p class="what">No outside data or word lists; country only limits the search; all models MIT, largest 560M.</p></div>
+    </div>
+  </div>
+
+  <div class="note"><b>Models used:</b> e5-small (118M) and e5-large (560M), MIT · our fine-tuned retriever and
+    cross-encoder (from e5-small) · XGBoost for stages 1–3 · LightGBM for the auxiliary matcher.
+    <b>Libraries:</b> PyTorch, sentence-transformers, transformers, polars, pyarrow, numpy, RapidFuzz, jellyfish,
+    scikit-learn, anyascii.</div>
+</div>
+</body>
+</html>
