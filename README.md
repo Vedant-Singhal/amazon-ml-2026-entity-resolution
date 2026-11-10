@@ -124,6 +124,19 @@ Step-by-step commands for all three: [docs/05 · infrastructure and reproducibil
 Literature that shaped the solution: [docs/06](docs/06-literature.md). Built on `intfloat/multilingual-e5`, XGBoost,
 LightGBM, PyTorch, sentence-transformers, polars, RapidFuzz and anyascii.
 
+## My Contribution
+
+As part of Team 4Miracles, I contributed to the experimentation and evaluation of different modelling approaches for business entity resolution. My work involved:
+
+- Experimenting with multiple model architectures and approaches for entity matching.
+- Comparing model performance and evaluating different configurations.
+- Contributing to discussions and analysis that helped select the final modelling approach.
+- Collaborating with the team to build a scalable entity-resolution pipeline for matching noisy business records.
+
+The project achieved a public leaderboard score of **0.984403 Macro F0.5**.
+
+*This was a collaborative team project; the repository contains the combined work of all four members.*
+
 ## License
 
 Code: [MIT](LICENSE). The competition data belongs to the organizers and is not part of this repository.
